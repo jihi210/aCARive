@@ -42,7 +42,7 @@ fun RouteCanvas(points: List<RoutePoint>, modifier: Modifier = Modifier) {
             y = (offsetY + (maxLat - p.latitude) * scale).toFloat()
         )
 
-        // 4) 점들을 순서대로 이어 선 만들기
+        // 점들을 순서대로 이어 선 만들기
         val path = Path().apply {
             moveTo(toScreen(points.first()).x, toScreen(points.first()).y)
             points.drop(1).forEach { p ->
