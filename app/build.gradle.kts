@@ -39,6 +39,7 @@ android {
 
 dependencies {
     val room_version = "3.0.3"
+    val media3_version = "1.10.1"
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -50,6 +51,15 @@ dependencies {
     implementation("ai.pleos.playground:FusedLocation:1.1.3")
     implementation("androidx.room3:room3-runtime:$room_version")
     ksp("androidx.room3:room3-compiler:$room_version")
+    //지도
+    implementation("org.maplibre.gl:android-sdk:13.6.1")
+    //영상 만들기, 재생
+    val media3 = "1.8.0"
+    implementation("androidx.media3:media3-transformer:$media3")
+    implementation("androidx.media3:media3-effect:$media3")
+    implementation("androidx.media3:media3-common:$media3")
+    implementation("androidx.media3:media3-exoplayer:$media3")
+    implementation("androidx.media3:media3-ui:$media3")
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
