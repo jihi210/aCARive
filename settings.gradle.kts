@@ -23,5 +23,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "DriveApp"
+rootProject.name = "aCARive"
 include(":app")

@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.driveapp"
+    namespace = "com.example.acarive"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.driveapp"
+        applicationId = "com.example.acarive"
         minSdk = 28
         targetSdk = 37
         versionCode = 1
@@ -48,6 +48,10 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
     implementation("ai.pleos.playground:FusedLocation:1.1.3")
     implementation("androidx.room3:room3-runtime:$room_version")
     ksp("androidx.room3:room3-compiler:$room_version")

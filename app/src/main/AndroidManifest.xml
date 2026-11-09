@@ -2,9 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    //권한 가지고 오기
-    <uses-permission android:name="pleos.car.permission.FUSED_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="pleos.car.permission.FUSED_LOCATION" />
 
     <application
         android:allowBackup="true"
@@ -14,13 +13,17 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.DriveApp">
+        android:theme="@style/Theme.ACARive">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.DriveApp"
+            android:theme="@style/Theme.ACARive"
             android:windowSoftInputMode="adjustResize">
+            <!-- 선언하지 않으면 Pleos Connect 에서 주행 중 실행이 차단된다. 주행 중 UI는 AppUiState.isDrivingRestricted 로 제한한다. -->
+            <meta-data
+                android:name="distractionOptimized"
+                android:value="true" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
