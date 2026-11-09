@@ -1,7 +1,14 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     id("com.google.devtools.ksp")
+}
+
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -18,6 +25,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"${localProps.getProperty("SPOTIFY_CLIENT_ID", "")}\"")
+        buildConfigField("String", "KMA_SERVICE_KEY", "\"${localProps.getProperty("KMA_SERVICE_KEY", "")}\"")
     }
 
     buildTypes {
@@ -34,6 +43,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -85,6 +95,4 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")
-    //기상청 API
-    buildConfigField("String", "KMA_SERVICE_KEY", "\"${localProps.getProperty("KMA_SERVICE_KEY", "")}\"")
-}
+    }
