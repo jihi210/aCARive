@@ -71,4 +71,18 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    //음악 추천
+    implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.material)
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.junit)
+    implementation(files("libs/spotify-app-remote-release-0.8.0.aar"))
+    implementation("com.google.code.gson:gson:2.10.1")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")
 }
