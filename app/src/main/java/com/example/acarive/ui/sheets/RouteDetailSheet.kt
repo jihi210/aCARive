@@ -100,8 +100,8 @@ fun RouteDetailSheet(
                     text = "이 코스로 출발하기",
                     icon = AppIcon.Car,
                     onClick = {
-                        onStartDrive()
                         close()
+                        onStartDrive()
                     },
                 )
             }
