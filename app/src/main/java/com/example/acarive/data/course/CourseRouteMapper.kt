@@ -4,35 +4,39 @@ import com.example.acarive.data.model.HeroRecommendation
 import com.example.acarive.data.model.Route
 import java.util.Locale
 
-// 카탈로그 코스(DriveCourse) -> 화면용 Route 변환
+// 추천 결과(CourseRecommendation) -> 화면용 Route 변환
 
 private const val UNKNOWN = "-"
 
-fun DriveCourse.toRoute(): Route = Route(
-    id = id,
-    name = name,
-    area = area,
-    duration = takeTimeMinutes?.let(::formatMinutes) ?: takeTimeText ?: UNKNOWN,
-    distance = distanceKm?.let { String.format(Locale.KOREA, "%.0f km", it) } ?: distanceText ?: UNKNOWN,
+fun CourseRecommendation.toRoute(): Route = Route(
+    id = course.id,
+    name = course.name,
+    area = course.area,
+    // 현 위치 기준 왕복 운전 시간. TourAPI 소요시간은 관광 시간까지 들어 있어 쓰지 않는다.
+    duration = estimate?.let { formatMinutes(roundTo10(it.roundTripMinutes)) } ?: UNKNOWN,
+    distance = estimate?.let { String.format(Locale.KOREA, "%.0f km", it.totalKm) } ?: UNKNOWN,
     // 테마 정의 순서대로 보여준다
-    tags = CourseTheme.entries.filter { it in themes }.map { it.label },
+    tags = CourseTheme.entries.filter { it in course.themes }.map { it.label },
     // 코스 자체 이미지가 없으면 사진이 있는 첫 경유지
-    imageUrl = (imageUrl ?: stops.firstNotNullOfOrNull { it.imageUrl })?.toHttps(),
+    imageUrl = (course.imageUrl ?: course.stops.firstNotNullOfOrNull { it.imageUrl })?.toHttps(),
     congestion = null,
-    description = overview.cleanText(),
+    description = course.overview.cleanText(),
 )
 
-// 홈/코스 목록 순서: 테마가 붙은 코스를 먼저 (위치 기반 추천 전 임시 정렬)
-fun CourseCatalog.toRoutes(): List<Route> =
-    courses.sortedBy { it.themes.isEmpty() }.map { it.toRoute() }
-
-// TODO(recommend): 현재 위치·날씨·취향을 반영한 문구와 실제 소요 시간으로 교체
-fun heroFor(route: Route): HeroRecommendation {
-    val theme = route.tags.firstOrNull()?.let(CourseTheme::fromLabel)
+// originLabel: 위치를 못 받았을 때 기준 지점 이름 ("서울시청"). null 이면 현 위치
+// TODO(recommend): 날씨·시간대를 반영한 문구
+fun heroFor(rec: CourseRecommendation, originLabel: String?): HeroRecommendation {
+    val route = rec.toRoute()
+    // 취향과 겹친 테마를 먼저
+    val theme = CourseTheme.entries.firstOrNull { it in rec.matchedThemes }
+        ?: CourseTheme.entries.firstOrNull { it in rec.course.themes }
+    val eta = rec.estimate?.let {
+        "${originLabel ?: "현 위치"}에서 ${formatMinutes(roundTo10(it.toStartMinutes))} · 왕복 ${route.duration}"
+    } ?: route.area
     return HeroRecommendation(
         route = route,
         headline = theme?.headline ?: "오늘은 이 길로\n떠나보세요",
-        etaLabel = "${route.area} · 코스 ${route.duration}",
+        etaLabel = eta,
     )
 }
 
@@ -49,6 +53,9 @@ private val CourseTheme.headline: String
         CourseTheme.Quiet -> "한적한 길에서\n쉬어가세요"
         CourseTheme.Winding -> "굽이진 길을\n즐겨보세요"
     }
+
+// 추정치라 10분 단위로만 보여준다
+internal fun roundTo10(minutes: Int): Int = ((minutes + 5) / 10 * 10).coerceAtLeast(10)
 
 internal fun formatMinutes(minutes: Int): String {
     val h = minutes / 60

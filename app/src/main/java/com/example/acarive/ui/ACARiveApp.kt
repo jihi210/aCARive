@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,8 +64,11 @@ fun ACARiveApp(
     val selectRoute: (String) -> Unit = { selectedRouteId = it }
     val openVehicleSheet = { showVehicleSheet = true }
 
+    rememberStartupLocationRequest(onGranted = viewModel::startLocation)
+
     val startRecording = rememberRecordingStarter(
         onStart = {
+            viewModel.startLocation()
             recordViewModel.startRecording()
             viewModel.showToast("드라이브 기록을 시작했어요")
         },
@@ -200,6 +204,23 @@ fun ACARiveApp(
             onDisconnect = viewModel::disconnectVehicle,
             onDismiss = { showVehicleSheet = false },
         )
+    }
+}
+
+// 홈 추천에 현재 위치를 쓰려고 앱을 처음 열 때 한 번 위치 권한을 묻는다. 거절하면 서울시청 기준으로 추천.
+@Composable
+private fun rememberStartupLocationRequest(onGranted: () -> Unit) {
+    val context = LocalContext.current
+    var asked by rememberSaveable { mutableStateOf(false) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) onGranted()
+    }
+    LaunchedEffect(Unit) {
+        if (asked || USE_MOCK_LOCATION) return@LaunchedEffect
+        asked = true
+        val hasPermission = ContextCompat.checkSelfPermission(context, PleosLocation.PERMISSION) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!hasPermission) launcher.launch(PleosLocation.PERMISSION)
     }
 }
 
