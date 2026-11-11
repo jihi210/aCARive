@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -30,6 +31,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.acarive.data.SampleData
+import com.example.acarive.data.course.CourseTheme
 import com.example.acarive.data.model.Route
 import com.example.acarive.ui.components.PageHeader
 import com.example.acarive.ui.components.PagePadding
@@ -41,19 +43,23 @@ import com.example.acarive.ui.theme.AppType
 
 private const val FILTER_ALL = "전체"
 
-// TODO(backend): 필터 테마 목록을 서버 태그 기준으로 받아오고, 필터링도 코스 검색 API로 처리
-private val RouteFilters = listOf(FILTER_ALL, "바다", "숲길", "한적한")
+// TODO(backend): 필터링을 코스 검색 API로 처리
 
 /** 세로 창은 1열, 가로 창은 2열로 배치된다. */
 @Composable
 fun RouteScreen(
     routes: List<Route>,
-    favoriteRouteIds: Set<Int>,
-    onSelectRoute: (Int) -> Unit,
-    onToggleFavorite: (Int) -> Unit,
+    favoriteRouteIds: Set<String>,
+    onSelectRoute: (String) -> Unit,
+    onToggleFavorite: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var filter by rememberSaveable { mutableStateOf(FILTER_ALL) }
+    // 목록에 실제로 있는 테마만 칩으로 보여준다
+    val filters = remember(routes) {
+        val tags = routes.flatMapTo(mutableSetOf()) { it.tags }
+        listOf(FILTER_ALL) + CourseTheme.entries.map { it.label }.filter { it in tags }
+    }
     val filtered = routes.filter { filter == FILTER_ALL || filter in it.tags }
 
     LazyVerticalGrid(
@@ -71,7 +77,7 @@ fun RouteScreen(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                RouteFilters.forEach { item ->
+                filters.forEach { item ->
                     FilterChip(text = item, selected = item == filter, onClick = { filter = item })
                 }
             }

@@ -8,17 +8,16 @@ import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.data.model.Weather
 
 /**
- * 디자인 시안에 들어 있던 목업 데이터. 백엔드가 연결되면 이 파일은 삭제하고
- * [com.example.acarive.ui.AppViewModel] 에서 실제 데이터를 받아온다.
+ * 디자인 시안에 들어 있던 목업 데이터. 코스는 이제 assets 카탈로그에서 읽고, 여기 코스는 미리보기에만 쓴다.
+ * 나머지도 백엔드가 연결되면 [com.example.acarive.ui.AppViewModel] 에서 실제 데이터를 받아온다.
  */
 object SampleData {
     private const val DESCRIPTION =
         "물과 숲이 번갈아 펼쳐지는 길을 따라 달리는 코스예요. 전망이 좋은 세 곳을 경유하며, 잠시 쉬어가기 좋은 카페도 포함했어요."
 
-    // TODO(backend): 코스 추천 API. 기획상 메인 화면에는 왕복 2~3시간 코스 5개를 노출한다 (현재 목업은 3개).
     val routes = listOf(
         Route(
-            id = 1,
+            id = "sample:1",
             name = "북한강 물빛 드라이브",
             area = "양평 · 청평",
             duration = "2시간 20분",
@@ -29,7 +28,7 @@ object SampleData {
             description = DESCRIPTION,
         ),
         Route(
-            id = 2,
+            id = "sample:2",
             name = "해안 절벽 파노라마",
             area = "강릉 · 정동진",
             duration = "2시간 50분",
@@ -40,7 +39,7 @@ object SampleData {
             description = DESCRIPTION,
         ),
         Route(
-            id = 3,
+            id = "sample:3",
             name = "초록 능선 와인딩",
             area = "가평 · 유명산",
             duration = "2시간 10분",
@@ -86,5 +85,5 @@ object SampleData {
         recommendWhileDriving = true,
     )
 
-    val favoriteRouteIds = setOf(2)
+    val favoriteRouteIds = setOf("sample:2")
 }

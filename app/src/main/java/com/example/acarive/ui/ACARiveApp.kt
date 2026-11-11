@@ -55,10 +55,10 @@ fun ACARiveApp(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val recordState by recordViewModel.uiState.collectAsStateWithLifecycle()
     var activeTab by rememberSaveable { mutableStateOf(AppTab.Home) }
-    var selectedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var selectedRouteId by rememberSaveable { mutableStateOf<String?>(null) }
     var showVehicleSheet by rememberSaveable { mutableStateOf(false) }
 
-    val selectRoute: (Int) -> Unit = { selectedRouteId = it }
+    val selectRoute: (String) -> Unit = { selectedRouteId = it }
     val openVehicleSheet = { showVehicleSheet = true }
 
     val startRecording = rememberRecordingStarter(

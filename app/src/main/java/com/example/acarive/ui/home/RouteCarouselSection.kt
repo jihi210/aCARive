@@ -43,9 +43,9 @@ import com.example.acarive.ui.theme.bold
 @Composable
 internal fun RouteCarouselSection(
     routes: List<Route>,
-    favoriteRouteIds: Set<Int>,
-    onSelectRoute: (Int) -> Unit,
-    onToggleFavorite: (Int) -> Unit,
+    favoriteRouteIds: Set<String>,
+    onSelectRoute: (String) -> Unit,
+    onToggleFavorite: (String) -> Unit,
     onOpenAll: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth()) {

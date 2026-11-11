@@ -1,7 +1,5 @@
 package com.example.acarive.location
 
-data class LocationPoint(val lat: Double, val lng: Double)
-
 val mockRoute=listOf(
     LocationPoint(37.7952, 128.9183),
     LocationPoint(37.7981, 128.9150),

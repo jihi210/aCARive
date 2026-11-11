@@ -1,14 +1,16 @@
 package com.example.acarive.data.model
 
 data class Route(
-    val id: Int,
+    // 카탈로그 코스 id. 예: "tour:1846248"
+    val id: String,
     val name: String,
     val area: String,
     val duration: String,
     val distance: String,
     val tags: List<String>,
-    val imageUrl: String,
-    val congestion: String,
+    val imageUrl: String?,
+    // 혼잡도 데이터가 아직 없으면 null
+    val congestion: String?,
     val description: String,
 )
 

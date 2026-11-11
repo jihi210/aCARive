@@ -7,8 +7,12 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+# 개인 에뮬레이터 선택·기기 목록 상태
+/.idea/deploymentTargetSelector.xml
+/.idea/deviceManager.xml
 .DS_Store
-/build
+# 모든 모듈(app, shared, collector)의 빌드 출력
+build/
 /captures
 .externalNativeBuild
 .cxx
@@ -16,3 +20,6 @@ local.properties
 .kotlin
 node_modules
 dist
+# 수집 스크립트: API 키가 든 설정과 진행 상태
+/collector/collector.properties
+/collector/data

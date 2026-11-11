@@ -25,3 +25,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "aCARive"
 include(":app")
+include(":shared")
+include(":collector")

@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.acarive.data.SampleData
 import com.example.acarive.data.model.DriveSummary
 import com.example.acarive.ui.AppUiState
 import com.example.acarive.ui.components.PagePadding
@@ -32,9 +33,9 @@ fun HomeScreen(
     isWide: Boolean,
     onToggleDriveMode: () -> Unit,
     onOpenVehicle: () -> Unit,
-    onSelectRoute: (Int) -> Unit,
+    onSelectRoute: (String) -> Unit,
     onTogglePlaying: () -> Unit,
-    onToggleFavorite: (Int) -> Unit,
+    onToggleFavorite: (String) -> Unit,
     onOpenAllRoutes: () -> Unit,
     onOpenRecord: () -> Unit,
     modifier: Modifier = Modifier,
@@ -50,13 +51,16 @@ fun HomeScreen(
         VehicleStrip(vehicle = state.vehicle, onClick = onOpenVehicle)
     }
     val recommendations: @Composable () -> Unit = {
-        HeroCard(
-            hero = state.hero,
-            weather = state.weather,
-            onOpenRoute = { onSelectRoute(state.hero.route.id) },
-        )
+        state.hero?.let { hero ->
+            HeroCard(
+                hero = hero,
+                weather = state.weather,
+                onOpenRoute = { onSelectRoute(hero.route.id) },
+            )
+        }
         RouteCarouselSection(
-            routes = state.routes,
+            // 기획: 메인에는 5개만. 나머지는 전체보기(코스 탭)
+            routes = state.routes.take(HOME_ROUTE_COUNT),
             favoriteRouteIds = state.favoriteRouteIds,
             onSelectRoute = onSelectRoute,
             onToggleFavorite = onToggleFavorite,
@@ -113,13 +117,21 @@ internal fun SectionHeading(
     }
 }
 
+private const val HOME_ROUTE_COUNT = 5
+
 private val PreviewDriveSummary = DriveSummary(2026, 12_480.0, 42, "186시간", emptyList())
+
+private val PreviewState = AppUiState(
+    routes = SampleData.routes,
+    hero = SampleData.hero,
+    favoriteRouteIds = SampleData.favoriteRouteIds,
+)
 
 @Preview(showBackground = true, widthDp = 840, heightDp = 2200)
 @Composable
 private fun HomeScreenPreview() {
     ACARiveTheme {
-        HomeScreen(AppUiState(), PreviewDriveSummary, isWide = false, {}, {}, {}, {}, {}, {}, {})
+        HomeScreen(PreviewState, PreviewDriveSummary, isWide = false, {}, {}, {}, {}, {}, {}, {})
     }
 }
 
@@ -127,6 +139,6 @@ private fun HomeScreenPreview() {
 @Composable
 private fun HomeScreenWidePreview() {
     ACARiveTheme(darkTheme = true) {
-        HomeScreen(AppUiState(), PreviewDriveSummary, isWide = true, {}, {}, {}, {}, {}, {}, {})
+        HomeScreen(PreviewState, PreviewDriveSummary, isWide = true, {}, {}, {}, {}, {}, {}, {})
     }
 }

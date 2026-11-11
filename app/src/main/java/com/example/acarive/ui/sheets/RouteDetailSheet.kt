@@ -86,7 +86,7 @@ fun RouteDetailSheet(
                     items = listOf(
                         StatItem("예상 시간", route.duration),
                         StatItem("주행 거리", route.distance),
-                        StatItem("도로 혼잡", route.congestion),
+                        StatItem("도로 혼잡", route.congestion ?: "-"),
                     ),
                 )
                 HorizontalLine()

@@ -1,9 +1,15 @@
 package com.example.acarive.ui
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.acarive.data.SampleData
+import com.example.acarive.data.course.CourseCatalogRepository
+import com.example.acarive.data.course.heroFor
+import com.example.acarive.data.course.toRoutes
 import com.example.acarive.data.model.VehicleBrand
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,18 +19,41 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private const val TOAST_DURATION_MS = 2_200L
+private const val TAG = "AppViewModel"
 
-class AppViewModel : ViewModel() {
+class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // TODO(backend): 초기 상태를 SampleData 대신 API 응답으로 채우기
-    //  - 사용자 프로필/취향, 즐겨찾기 목록, 연결된 차량
-    //  - 추천 코스 + 히어로 추천: 취향 프로필 + 타 사용자 주행 기록 기반 추천 API, 공공/외부 풍경 데이터
+    //  - 사용자 프로필/취향, 즐겨찾기 목록(지금은 메모리에만 있어 앱을 끄면 사라짐), 연결된 차량
+    //  - 추천: 지금은 assets 카탈로그 전체를 보여준다. 위치·취향·타 사용자 기록 기반 정렬은 아직
     //  - 날씨: 현재 위치 기반 날씨 API
     //  - 로딩/에러 상태도 AppUiState 에 추가 필요
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
     private var toastJob: Job? = null
+
+    private val courseRepository = CourseCatalogRepository(application)
+
+    init {
+        loadCourses()
+    }
+
+    private fun loadCourses() {
+        viewModelScope.launch {
+            try {
+                val routes = courseRepository.load().toRoutes()
+                _uiState.update {
+                    it.copy(routes = routes, hero = routes.firstOrNull { r -> r.tags.isNotEmpty() }?.let(::heroFor))
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "코스 카탈로그 읽기 실패", e)
+                showToast("코스를 불러오지 못했어요")
+            }
+        }
+    }
 
     // TODO(vehicle): Pleos Connect 빌드에서 CarUxRestrictionsManager 를 구독해 isDrivingRestricted 를 갱신
     //  (NO_SETUP, NO_KEYBOARD, LIMIT_CONTENT 플래그 기준). 지금은 항상 false 라 제한 UI가 동작하지 않는다.
@@ -45,7 +74,7 @@ class AppViewModel : ViewModel() {
         _uiState.update { it.copy(isPlaying = !it.isPlaying) }
     }
 
-    fun toggleFavorite(routeId: Int) {
+    fun toggleFavorite(routeId: String) {
         // TODO(backend): 즐겨찾기 추가/삭제 API 호출 (실패 시 롤백)
         _uiState.update { state ->
             val favorites = state.favoriteRouteIds

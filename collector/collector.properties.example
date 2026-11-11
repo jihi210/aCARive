@@ -1,0 +1,37 @@
+# 이 파일을 collector.properties 로 복사해서 쓰세요. collector.properties 는 git 에 올라가지 않아요.
+#   cp collector/collector.properties.example collector/collector.properties
+
+# data.go.kr 마이페이지 > 활용신청 현황 > 한국관광공사_국문 관광정보 서비스_GW 의 인증키
+# Encoding / Decoding 키 어느 쪽이든 넣으면 돼요. (환경변수 TOUR_API_KEY 가 있으면 그게 우선)
+serviceKey=
+
+# MobileApp 파라미터 (서비스명)
+mobileApp=aCARive
+mobileOs=ETC
+
+# 한 번 실행에서 쓸 최대 호출 수. 개발계정 하루 한도(1,000)보다 조금 작게.
+callLimit=950
+# 호출 사이 대기 (ms)
+requestDelayMs=150
+# 목록 한 페이지 크기
+pageSize=100
+# 수집을 시작한 지 며칠 지나면 새로 수집할지
+refreshDays=30
+# 풍경 지점(자연 관광지) 목록도 모을지
+collectSpots=true
+
+# ── 코스 목록(areaBasedList2) 에 덧붙일 파라미터: courseList.<파라미터명>=값
+# 기본으로 contentTypeId=25, arrange=C 가 들어가요. 같은 이름을 쓰면 덮어써요.
+# 예) 강원만 모으기: courseList.lDongRegnCd=51
+#courseList.lDongRegnCd=
+#courseList.cat2=
+
+# ── 풍경 지점 목록에 덧붙일 파라미터: spotList.<파라미터명>=값
+# 기본으로 contentTypeId=12, arrange=C, cat1=A01(자연) 이 들어가요.
+# 하나라도 적으면 cat1=A01 기본값은 빠지니 필요하면 같이 적어 주세요.
+#spotList.cat1=A01
+#spotList.cat2=A0101
+
+# 진행 상태 / 결과 파일 경로 (프로젝트 루트 기준)
+#stateFile=collector/data/state.json
+#catalogFile=app/src/main/assets/course_catalog.json

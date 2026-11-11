@@ -33,9 +33,9 @@ import com.example.acarive.ui.theme.bold
 @Composable
 fun SavedScreen(
     routes: List<Route>,
-    favoriteRouteIds: Set<Int>,
-    onSelectRoute: (Int) -> Unit,
-    onToggleFavorite: (Int) -> Unit,
+    favoriteRouteIds: Set<String>,
+    onSelectRoute: (String) -> Unit,
+    onToggleFavorite: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // TODO(backend): 추천 코스 목록에서 거르는 대신 즐겨찾기 목록 API로 조회 (추천에 없는 코스도 저장될 수 있음)
