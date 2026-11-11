@@ -32,6 +32,7 @@ import com.example.acarive.location.PleosLocation
 import com.example.acarive.ui.components.AppBottomNav
 import com.example.acarive.ui.components.AppNavRail
 import com.example.acarive.ui.components.AppToast
+import com.example.acarive.ui.drive.DriveScreen
 import com.example.acarive.ui.home.HomeScreen
 import com.example.acarive.ui.my.MyScreen
 import com.example.acarive.ui.navigation.AppTab
@@ -56,6 +57,7 @@ fun ACARiveApp(
     val recordState by recordViewModel.uiState.collectAsStateWithLifecycle()
     var activeTab by rememberSaveable { mutableStateOf(AppTab.Home) }
     var selectedRouteId by rememberSaveable { mutableStateOf<String?>(null) }
+    var activeDriveRouteId by rememberSaveable { mutableStateOf<String?>(null) }
     var showVehicleSheet by rememberSaveable { mutableStateOf(false) }
 
     val selectRoute: (String) -> Unit = { selectedRouteId = it }
@@ -91,7 +93,19 @@ fun ACARiveApp(
         val isWide = maxWidth >= WideWindowWidth
         val content: @Composable (Modifier) -> Unit = { modifier ->
             Box(modifier) {
-                when (activeTab) {
+                val activeDriveRoute = state.routes.firstOrNull { it.id == activeDriveRouteId }
+                if (activeDriveRoute != null) {
+                    DriveScreen(
+                        routeName = activeDriveRoute.name,
+                        remainingDistance = activeDriveRoute.distance,
+                        remainingTime = activeDriveRoute.duration,
+                        speedKph = 0,
+                        onEndDrive = {
+                            if (recordState.isRecording) finishRecording()
+                            activeDriveRouteId = null
+                        },
+                    )
+                } else when (activeTab) {
                     AppTab.Home -> HomeScreen(
                         state = state,
                         driveSummary = recordState.summary,
@@ -141,13 +155,15 @@ fun ACARiveApp(
                 ToastHost(
                     message = state.toastMessage,
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
+                        .align(if (activeDriveRoute != null) Alignment.Center else Alignment.BottomCenter)
                         .padding(24.dp),
                 )
             }
         }
 
-        if (isWide) {
+        if (activeDriveRouteId != null) {
+            content(Modifier.fillMaxSize())
+        } else if (isWide) {
             Row(Modifier.fillMaxSize()) {
                 AppNavRail(activeTab = activeTab, onSelect = { activeTab = it })
                 content(Modifier.weight(1f).fillMaxSize())
@@ -166,7 +182,10 @@ fun ACARiveApp(
             isFavorite = route.id in state.favoriteRouteIds,
             isDrivingRestricted = state.isDrivingRestricted,
             onToggleFavorite = { viewModel.toggleFavorite(route.id) },
-            onStartDrive = requestRecording,
+            onStartDrive = {
+                activeDriveRouteId = route.id
+                requestRecording()
+            },
             onDismiss = { selectedRouteId = null },
         )
     }
