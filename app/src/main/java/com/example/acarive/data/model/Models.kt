@@ -32,13 +32,20 @@ data class NowPlaying(
     val contextTags: List<String>,
 )
 
+// 연결된 차량. 못 받은 값은 null 이고 화면에는 "-" 로 보인다.
 data class VehicleInfo(
     val name: String,
-    val plateNumber: String,
-    val lastSynced: String,
-    val speedKmh: Int,
-    val batteryPercent: Int,
-    val rangeKm: Int,
+    // "실시간 수신 중" 같은 연결 상태 문구
+    val statusLabel: String,
+    // VIN 끝 4자리 (번호판 대신 차량 구분용)
+    val vinSuffix: String?,
+    // P/R/N/D
+    val gear: String?,
+    val speedKmh: Int?,
+    // EV 면 "배터리", 내연기관이면 "연료"
+    val energyLabel: String,
+    val energyPercent: Int?,
+    val rangeKm: Int?,
 )
 
 data class DriveHistoryItem(

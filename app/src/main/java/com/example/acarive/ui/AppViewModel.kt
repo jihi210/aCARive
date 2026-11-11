@@ -13,19 +13,25 @@ import com.example.acarive.data.course.CourseCatalogRepository
 import com.example.acarive.data.course.CourseRecommender
 import com.example.acarive.data.course.heroFor
 import com.example.acarive.data.course.toRoute
+import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.location.LocationPoint
 import com.example.acarive.location.PleosLocation
 import com.example.acarive.location.mockRoute
 import com.example.acarive.ui.record.USE_MOCK_LOCATION
+import com.example.acarive.vehicle.PleosVehicle
+import com.example.acarive.vehicle.VehicleData
+import com.example.acarive.vehicle.label
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private const val TOAST_DURATION_MS = 2_200L
 private const val TAG = "AppViewModel"
@@ -35,6 +41,9 @@ private val DEFAULT_ORIGIN = LocationPoint(37.5665, 126.9780)
 private const val DEFAULT_ORIGIN_LABEL = "서울시청"
 // 이만큼 움직였을 때만 추천을 다시 계산한다
 private const val RECOMMEND_MOVE_KM = 5.0
+
+// true 면 Pleos 차량 서비스 대신 목업 차량을 연결한다. 일반 폰·에뮬레이터에서 화면 확인할 때만 켠다.
+const val USE_MOCK_VEHICLE = false
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -55,6 +64,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var origin: LocationPoint = if (USE_MOCK_LOCATION) mockRoute.first() else DEFAULT_ORIGIN
     private var hasRealOrigin = USE_MOCK_LOCATION
     private var location: PleosLocation? = null
+    // 위치 변화로 계산한 속도. 차량 카드에 쓴다
+    private val speedKmh = MutableStateFlow<Int?>(null)
+
+    private var vehicle: PleosVehicle? = null
+    private var vehicleJob: Job? = null
 
     init {
         loadCourses()
@@ -72,6 +86,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         source.start()
         viewModelScope.launch {
             snapshotFlow { source.latest }.filterNotNull().collect(::onLocation)
+        }
+        viewModelScope.launch {
+            snapshotFlow { source.speedKmh }.collect { speedKmh.value = it }
         }
     }
 
@@ -135,21 +152,45 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // 현대차만 지원. 로그인 없이 Pleos Connect 차량 서비스에서 바로 데이터를 받는다.
+    // 차량 권한(PleosVehicle.PERMISSIONS)은 화면에서 먼저 요청한다.
     fun connectVehicle() {
-        // 현대차만 지원. 로그인 없이 차량(Pleos Connect)에서 바로 데이터를 받는다.
-        // TODO(vehicle): Pleos Vehicle SDK 로 차량 정보·실시간 데이터(속도, 주행 상태, 배터리) 구독. 지금은 목업 차량
-        _uiState.update { it.copy(vehicle = SampleData.connectedVehicle) }
+        if (USE_MOCK_VEHICLE) {
+            _uiState.update { it.copy(vehicle = SampleData.connectedVehicle) }
+            showToast("목업 차량이 연결됐어요")
+            return
+        }
+        val app = getApplication<Application>()
+        if (!PleosVehicle.isAvailable(app)) {
+            showToast("이 기기에서는 차량 데이터를 받을 수 없어요")
+            return
+        }
+        if (vehicle != null) return
+        val source = PleosVehicle(app).also { vehicle = it }
+        source.start()
+        vehicleJob = viewModelScope.launch {
+            combine(source.data, speedKmh) { data, speed -> data.toVehicleInfo(speed) }
+                .collect { info -> _uiState.update { it.copy(vehicle = info) } }
+        }
         showToast("현대 차량이 연결됐어요")
     }
 
     fun disconnectVehicle() {
-        // TODO(backend): 차량 연결 해제 API 호출 및 데이터 수신 중단
+        stopVehicle()
         _uiState.update { it.copy(vehicle = null) }
         showToast("차량 연결을 해제했어요")
     }
 
+    private fun stopVehicle() {
+        vehicleJob?.cancel()
+        vehicleJob = null
+        vehicle?.stop()
+        vehicle = null
+    }
+
     override fun onCleared() {
         location?.stop()
+        stopVehicle()
     }
 
     fun showToast(message: String) {
@@ -161,3 +202,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
+
+// 차량 SDK 값 -> 화면용. 배터리 값이 오면 EV 로 본다.
+private fun VehicleData.toVehicleInfo(speedKmh: Int?): VehicleInfo = VehicleInfo(
+    // 차종 이름은 SDK 에서 주지 않는다
+    name = "내 현대차",
+    statusLabel = "실시간 수신 중",
+    vinSuffix = vin?.takeLast(4),
+    gear = gear?.label,
+    speedKmh = speedKmh,
+    energyLabel = if (evBatteryPercent != null) "배터리" else "연료",
+    energyPercent = evBatteryPercent ?: fuelPercent,
+    rangeKm = rangeMeters?.let { (it / 1000).roundToInt() },
+)

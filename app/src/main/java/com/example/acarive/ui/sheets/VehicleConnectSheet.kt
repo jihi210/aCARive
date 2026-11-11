@@ -118,21 +118,24 @@ private fun ConnectedVehicleContent(
     onDisconnect: () -> Unit,
 ) {
     val colors = AppTheme.colors
-    // TODO(backend): 실시간 차량 데이터 구독 (속도, 배터리, 주행 가능 거리, 마지막 동기화 시각)
     Column(Modifier.fillMaxWidth()) {
         Spacer(Modifier.height(24.dp))
         Text(vehicle.name, color = colors.text, style = AppType.HeadlineSmall)
         Text(
-            "${vehicle.plateNumber} · 마지막 동기화 ${vehicle.lastSynced}",
+            listOfNotNull(
+                vehicle.vinSuffix?.let { "VIN ···$it" },
+                vehicle.gear?.let { "기어 $it" },
+                vehicle.statusLabel,
+            ).joinToString(" · "),
             color = colors.textSecondary,
             style = AppType.LabelMedium,
         )
         Spacer(Modifier.height(24.dp))
         StatGrid(
             items = listOf(
-                StatItem("주행 속도", "${vehicle.speedKmh} km/h"),
-                StatItem("배터리", "${vehicle.batteryPercent}%"),
-                StatItem("주행 가능", "${vehicle.rangeKm} km"),
+                StatItem("주행 속도", vehicle.speedKmh?.let { "$it km/h" } ?: "-"),
+                StatItem(vehicle.energyLabel, vehicle.energyPercent?.let { "$it%" } ?: "-"),
+                StatItem("주행 가능", vehicle.rangeKm?.let { "$it km" } ?: "-"),
             ),
             modifier = Modifier.border(2.dp, colors.line, CardShape),
         )

@@ -4,6 +4,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="pleos.car.permission.FUSED_LOCATION" />
+    <!-- Pleos Vehicle SDK 읽기 권한: 차량 정보(VIN), 기어, 배터리·연료·주행 가능 거리 -->
+    <uses-permission android:name="pleos.car.permission.CAR_INFO" />
+    <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />
+    <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />
 
     <queries>
         <package android:name="com.spotify.music" />

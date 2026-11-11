@@ -68,10 +68,12 @@ object SampleData {
 
     val connectedVehicle = VehicleInfo(
         name = "IONIQ 5",
-        plateNumber = "12가 3456",
-        lastSynced = "방금 전",
+        statusLabel = "목업 데이터",
+        vinSuffix = "3456",
+        gear = "D",
         speedKmh = 42,
-        batteryPercent = 74,
+        energyLabel = "배터리",
+        energyPercent = 74,
         rangeKm = 338,
     )
 

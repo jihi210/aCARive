@@ -2,11 +2,11 @@ package com.acarive.scenic
 
 import android.app.Application
 import android.util.Log
+import com.example.acarive.BuildConfig
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.acarive.scenic.context.AggregatorConfig
 import com.acarive.scenic.context.ContextAggregator
-import com.acarive.scenic.context.KmaWeatherSource
 import com.acarive.scenic.context.MockSpeedSource
 import com.acarive.scenic.context.MockWeatherSource
 import com.acarive.scenic.context.WeatherInfo
@@ -28,17 +28,14 @@ class DriveViewModel(app: Application) : AndroidViewModel(app) {
 
     // 스위치: false로 두면 Mock으로 동작 (키가 없거나 기기에 Spotify가 없을 때)
     private val useSpotify = true
-    private val useKma = true
+    // TODO(music): KmaWeatherSource 가 아직 커밋되지 않아 Mock 날씨로 둔다. 파일이 올라오면 다시 연결
+    private val useKma = false
 
     // 속도와 날씨 Mock (디버그용)
     val speed = MockSpeedSource(0.0)
     val mockWeather = MockWeatherSource(WeatherInfo(Weather.RAIN, 8.0))
 
-    private val weatherSource: WeatherSource =
-        if (useKma) KmaWeatherSource(
-            serviceKey = BuildConfig.KMA_SERVICE_KEY,
-            locationProvider = { 37.5665 to 126.9780 },   // 서울시청 고정 좌표
-        ) else mockWeather
+    private val weatherSource: WeatherSource = mockWeather
 
     private val aggregator = ContextAggregator(speed, weatherSource, AggregatorConfig.demo())
 

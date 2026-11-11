@@ -45,6 +45,7 @@ import com.example.acarive.ui.saved.SavedScreen
 import com.example.acarive.ui.sheets.RouteDetailSheet
 import com.example.acarive.ui.sheets.VehicleConnectSheet
 import com.example.acarive.ui.theme.AppTheme
+import com.example.acarive.vehicle.PleosVehicle
 
 /** 이 폭 이상이면 가로 창(앱 영역 2칸)으로 보고 측면 탭 + 2단 레이아웃을 쓴다. */
 val WideWindowWidth = 1200.dp
@@ -65,6 +66,14 @@ fun ACARiveApp(
     val openVehicleSheet = { showVehicleSheet = true }
 
     rememberStartupLocationRequest(onGranted = viewModel::startLocation)
+
+    // 차량 읽기 권한을 받은 뒤 연결한다. 일부를 거절해도 받을 수 있는 값은 받는다.
+    val vehiclePermissions = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { viewModel.connectVehicle() }
+    val connectVehicle: () -> Unit = {
+        if (USE_MOCK_VEHICLE) viewModel.connectVehicle() else vehiclePermissions.launch(PleosVehicle.PERMISSIONS)
+    }
 
     val startRecording = rememberRecordingStarter(
         onStart = {
@@ -198,7 +207,7 @@ fun ACARiveApp(
         VehicleConnectSheet(
             vehicle = state.vehicle,
             isDrivingRestricted = state.isDrivingRestricted,
-            onConnect = viewModel::connectVehicle,
+            onConnect = connectVehicle,
             onDisconnect = viewModel::disconnectVehicle,
             onDismiss = { showVehicleSheet = false },
         )
