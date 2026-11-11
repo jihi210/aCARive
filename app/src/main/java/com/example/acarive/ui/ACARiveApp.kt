@@ -197,9 +197,7 @@ fun ACARiveApp(
     if (showVehicleSheet) {
         VehicleConnectSheet(
             vehicle = state.vehicle,
-            selectedBrand = state.selectedBrand,
             isDrivingRestricted = state.isDrivingRestricted,
-            onSelectBrand = viewModel::selectBrand,
             onConnect = viewModel::connectVehicle,
             onDisconnect = viewModel::disconnectVehicle,
             onDismiss = { showVehicleSheet = false },

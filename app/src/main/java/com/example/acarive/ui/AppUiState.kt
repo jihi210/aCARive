@@ -5,7 +5,6 @@ import com.example.acarive.data.model.HeroRecommendation
 import com.example.acarive.data.model.NowPlaying
 import com.example.acarive.data.model.Route
 import com.example.acarive.data.model.UserProfile
-import com.example.acarive.data.model.VehicleBrand
 import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.data.model.Weather
 
@@ -26,6 +25,5 @@ data class AppUiState(
     val isPlaying: Boolean = false,
     /** null 이면 차량 미연결 상태 */
     val vehicle: VehicleInfo? = null,
-    val selectedBrand: VehicleBrand = VehicleBrand.Hyundai,
     val toastMessage: String? = null,
 )

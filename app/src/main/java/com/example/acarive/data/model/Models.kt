@@ -32,12 +32,6 @@ data class NowPlaying(
     val contextTags: List<String>,
 )
 
-enum class VehicleBrand(val label: String) {
-    Hyundai("현대"),
-    Genesis("제네시스"),
-    Kia("기아"),
-}
-
 data class VehicleInfo(
     val name: String,
     val plateNumber: String,

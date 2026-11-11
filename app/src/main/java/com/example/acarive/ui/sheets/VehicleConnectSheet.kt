@@ -2,7 +2,6 @@ package com.example.acarive.ui.sheets
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,11 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import com.example.acarive.data.model.VehicleBrand
 import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.ui.components.AppIcon
 import com.example.acarive.ui.components.AppIconImage
@@ -53,9 +50,7 @@ private val DataPermissions = listOf(
 @Composable
 fun VehicleConnectSheet(
     vehicle: VehicleInfo?,
-    selectedBrand: VehicleBrand,
     isDrivingRestricted: Boolean,
-    onSelectBrand: (VehicleBrand) -> Unit,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onDismiss: () -> Unit,
@@ -93,11 +88,9 @@ fun VehicleConnectSheet(
                         close()
                     },
                 )
-                // 계정 인증과 동의는 설정 작업이므로 주행 중에 막는다 (NO_SETUP).
+                // 연결과 데이터 이용 동의는 설정 작업이므로 주행 중에 막는다 (NO_SETUP).
                 isDrivingRestricted -> ParkingRequiredNotice()
                 else -> ConnectFormContent(
-                    selectedBrand = selectedBrand,
-                    onSelectBrand = onSelectBrand,
                     onConnect = {
                         onConnect()
                         close()
@@ -165,8 +158,6 @@ private fun ConnectedVehicleContent(
 
 @Composable
 private fun ConnectFormContent(
-    selectedBrand: VehicleBrand,
-    onSelectBrand: (VehicleBrand) -> Unit,
     onConnect: () -> Unit,
 ) {
     val colors = AppTheme.colors
@@ -176,19 +167,12 @@ private fun ConnectFormContent(
         color = colors.textSecondary,
         style = AppType.BodySmall,
     )
-    Spacer(Modifier.height(32.dp))
-    Text("차량 브랜드", color = colors.text, style = AppType.BodyMedium.bold)
-    Spacer(Modifier.height(16.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        VehicleBrand.entries.forEach { brand ->
-            BrandOption(
-                brand = brand,
-                selected = brand == selectedBrand,
-                onClick = { onSelectBrand(brand) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
+    Spacer(Modifier.height(8.dp))
+    Text(
+        "현대자동차만 연결할 수 있어요.",
+        color = colors.textSecondary,
+        style = AppType.LabelMedium,
+    )
     Spacer(Modifier.height(32.dp))
     Text("데이터 이용 동의", color = colors.text, style = AppType.BodyMedium.bold)
     Spacer(Modifier.height(8.dp))
@@ -204,34 +188,10 @@ private fun ConnectFormContent(
     )
     Spacer(Modifier.height(24.dp))
     PrimaryButton(
-        text = "${selectedBrand.label} 계정으로 연결",
+        text = "현대 차량 연결하기",
         icon = AppIcon.Car,
         onClick = onConnect,
     )
-}
-
-@Composable
-private fun BrandOption(
-    brand: VehicleBrand,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = AppTheme.colors
-    val contentColor = if (selected) colors.onPrimary else colors.text
-    Row(
-        modifier = modifier
-            .heightIn(min = 88.dp)
-            .clip(CardShape)
-            .background(if (selected) colors.primary else Color.Transparent)
-            .border(2.dp, if (selected) colors.primary else colors.line, CardShape)
-            .tapClickable(role = Role.RadioButton, onClick = onClick),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (selected) AppIconImage(AppIcon.Check, contentColor, size = 32.dp)
-        Text(brand.label, color = contentColor, style = if (selected) AppType.BodySmall.bold else AppType.BodySmall)
-    }
 }
 
 @Composable

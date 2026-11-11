@@ -51,7 +51,7 @@ fun MyScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = AppTheme.colors
-    // 설정·계정 작업은 주행 중에 막는다 (NO_SETUP). 막힌 기능을 누르면 안내만 띄운다.
+    // 설정 작업은 주행 중에 막는다 (NO_SETUP). 막힌 기능을 누르면 안내만 띄운다.
     val whenParked: (() -> Unit) -> () -> Unit = { action ->
         { if (isDrivingRestricted) onRestricted() else action() }
     }
@@ -92,14 +92,6 @@ fun MyScreen(
                 label = "기록 공유 설정",
                 value = null,
                 // TODO(backend): 기록 공유 설정 조회/저장 (시안에 화면 없음)
-                onClick = whenParked {},
-            )
-            HorizontalLine()
-            SettingRow(
-                icon = AppIcon.User,
-                label = "로그아웃 · 계정 전환",
-                value = null,
-                // TODO(backend): 로그아웃/계정 전환. 가이드 필수 항목 (운전자 변경, 차량 소유자 변경 대응)
                 onClick = whenParked {},
             )
         }

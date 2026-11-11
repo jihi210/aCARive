@@ -13,7 +13,6 @@ import com.example.acarive.data.course.CourseCatalogRepository
 import com.example.acarive.data.course.CourseRecommender
 import com.example.acarive.data.course.heroFor
 import com.example.acarive.data.course.toRoute
-import com.example.acarive.data.model.VehicleBrand
 import com.example.acarive.location.LocationPoint
 import com.example.acarive.location.PleosLocation
 import com.example.acarive.location.mockRoute
@@ -136,16 +135,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun selectBrand(brand: VehicleBrand) {
-        _uiState.update { it.copy(selectedBrand = brand) }
-    }
-
     fun connectVehicle() {
-        // TODO(backend): 선택한 브랜드의 커넥티드카 계정 OAuth 인증 + 데이터 이용 동의 저장 후
-        //  실제 차량 정보와 실시간 데이터(속도, 주행 상태, 배터리)를 구독. 지금은 브랜드와 무관하게 목업 차량이 연결된다.
-        val brand = _uiState.value.selectedBrand
+        // 현대차만 지원. 로그인 없이 차량(Pleos Connect)에서 바로 데이터를 받는다.
+        // TODO(vehicle): Pleos Vehicle SDK 로 차량 정보·실시간 데이터(속도, 주행 상태, 배터리) 구독. 지금은 목업 차량
         _uiState.update { it.copy(vehicle = SampleData.connectedVehicle) }
-        showToast("${brand.label} 차량이 연결됐어요")
+        showToast("현대 차량이 연결됐어요")
     }
 
     fun disconnectVehicle() {
