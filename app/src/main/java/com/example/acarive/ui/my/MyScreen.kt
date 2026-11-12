@@ -49,6 +49,8 @@ fun MyScreen(
     onToggleRecommendWhileDriving: () -> Unit,
     onEditPreferences: () -> Unit,
     onRestricted: () -> Unit,
+    isDemoActive: Boolean,
+    onOpenDemo: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = AppTheme.colors
@@ -94,6 +96,14 @@ fun MyScreen(
                 value = null,
                 // TODO(backend): 기록 공유 설정 조회/저장 (시안에 화면 없음)
                 onClick = whenParked {},
+            )
+            HorizontalLine()
+            // 시연용. 차 안에서 바로 쓸 수 있게 주행 제한을 걸지 않는다
+            SettingRow(
+                icon = AppIcon.Pin,
+                label = "데모 주행",
+                value = if (isDemoActive) "켜짐" else "꺼짐",
+                onClick = onOpenDemo,
             )
         }
     }
@@ -193,6 +203,6 @@ private fun SettingRow(
 @Composable
 private fun MyScreenPreview() {
     ACARiveTheme {
-        MyScreen(SampleData.profile, vehicle = null, isDrivingRestricted = false, onOpenVehicle = {}, spotify = SpotifyStatus.Connected, onToggleSpotify = {}, onToggleRecommendWhileDriving = {}, onEditPreferences = {}, onRestricted = {})
+        MyScreen(SampleData.profile, vehicle = null, isDrivingRestricted = false, onOpenVehicle = {}, spotify = SpotifyStatus.Connected, onToggleSpotify = {}, onToggleRecommendWhileDriving = {}, onEditPreferences = {}, onRestricted = {}, isDemoActive = false, onOpenDemo = {})
     }
 }

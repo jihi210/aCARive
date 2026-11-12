@@ -1,6 +1,7 @@
 package com.example.acarive.ui
 
 import com.example.acarive.data.SampleData
+import com.example.acarive.location.LocationPoint
 import com.example.acarive.data.model.DriveSuggestion
 import com.example.acarive.data.model.HeroRecommendation
 import com.example.acarive.data.model.NowPlaying
@@ -32,5 +33,11 @@ data class AppUiState(
     val vehicle: VehicleInfo? = null,
     // 주행 중 추천 카드. 비어 있으면 카드를 띄우지 않는다 (AppViewModel.setDriving)
     val driveSuggestions: List<DriveSuggestion> = emptyList(),
+    // 위치 변화로 계산한 속도 (데모면 시뮬레이션 속도). 못 받으면 null
+    val speedKmh: Int? = null,
+    // 데모 주행 출발 위치. null 이면 데모 꺼짐 (DemoDrive)
+    val demoStart: LocationPoint? = null,
+    // 카탈로그 코스 출발점. 데모 위치 고르는 지도에 표시한다
+    val courseStarts: List<LocationPoint> = emptyList(),
     val toastMessage: String? = null,
 )

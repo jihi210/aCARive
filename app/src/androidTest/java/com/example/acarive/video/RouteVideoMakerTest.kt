@@ -2,8 +2,6 @@ package com.example.acarive.video
 
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
-import android.os.Environment
-import androidx.core.content.FileProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.acarive.data.drive.DriveSession
@@ -19,15 +17,6 @@ import java.io.File
 // 목업 경로로 실제 영상을 만들어 본다. 지도 타일을 받아야 해서 인터넷이 필요하다.
 @RunWith(AndroidJUnit4::class)
 class RouteVideoMakerTest {
-
-    // 영상 저장 폴더(DriveRecordViewModel.videoFile)를 FileProvider 가 공유할 수 있는지
-    @Test
-    fun fileProviderCoversVideoFolder() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val dir = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", File(dir, "drive_1.mp4"))
-        assertEquals("content", uri.scheme)
-    }
 
     @Test
     fun makesFiveSecondVideoFromRoute(): Unit = runBlocking {

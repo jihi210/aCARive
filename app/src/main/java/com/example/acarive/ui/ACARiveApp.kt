@@ -35,6 +35,7 @@ import com.example.acarive.ui.components.AppBottomNav
 import com.example.acarive.ui.components.AppNavRail
 import com.example.acarive.ui.components.AppToast
 import com.example.acarive.ui.components.ContentMaxWidth
+import com.example.acarive.ui.demo.DemoStartScreen
 import com.example.acarive.ui.drive.DriveScreen
 import com.example.acarive.ui.drive.DriveSuggestionCard
 import com.example.acarive.ui.home.HomeScreen
@@ -66,6 +67,7 @@ fun ACARiveApp(
     var activeDriveRouteId by rememberSaveable { mutableStateOf<String?>(null) }
     var showVehicleSheet by rememberSaveable { mutableStateOf(false) }
     var showPreferenceSheet by rememberSaveable { mutableStateOf(false) }
+    var showDemoPicker by rememberSaveable { mutableStateOf(false) }
 
     val selectRoute: (String) -> Unit = { selectedRouteId = it }
     val openVehicleSheet = { showVehicleSheet = true }
@@ -81,6 +83,8 @@ fun ACARiveApp(
     }
 
     val startRecording = rememberRecordingStarter(
+        // 데모 주행은 Pleos 위치 권한 없이 기록한다
+        isDemo = state.demoStart != null,
         onStart = {
             viewModel.startLocation()
             recordViewModel.startRecording()
@@ -128,12 +132,20 @@ fun ACARiveApp(
         val content: @Composable (Modifier) -> Unit = { modifier ->
             Box(modifier) {
                 val activeDriveRoute = state.routes.firstOrNull { it.id == activeDriveRouteId }
-                if (activeDriveRoute != null) {
+                if (showDemoPicker) {
+                    DemoStartScreen(
+                        demoStart = state.demoStart,
+                        courseStarts = state.courseStarts,
+                        onPick = viewModel::setDemoStart,
+                        onClearDemo = viewModel::clearDemoStart,
+                        onClose = { showDemoPicker = false },
+                    )
+                } else if (activeDriveRoute != null) {
                     DriveScreen(
                         routeName = activeDriveRoute.name,
                         remainingDistance = activeDriveRoute.distance,
                         remainingTime = activeDriveRoute.duration,
-                        speedKph = 0,
+                        speedKph = state.speedKmh ?: 0,
                         onEndDrive = {
                             if (recordState.isRecording) finishRecording()
                             activeDriveRouteId = null
@@ -170,7 +182,11 @@ fun ACARiveApp(
                         onStopRecording = finishRecording,
                         onToggleDrive = recordViewModel::toggleExpanded,
                         onMakeVideo = recordViewModel::makeVideo,
-                        onShareUnavailable = { viewModel.showToast("이 기기에는 영상을 보낼 앱이 없어요") },
+                        onDownloadVideo = {
+                            recordViewModel.downloadVideo { saved ->
+                                viewModel.showToast(if (saved) "다운로드 폴더에 영상을 저장했어요" else "영상을 저장하지 못했어요")
+                            }
+                        },
                         isDrivingRestricted = state.isDrivingRestricted,
                     )
                     AppTab.Saved -> SavedScreen(
@@ -189,10 +205,12 @@ fun ACARiveApp(
                         onToggleRecommendWhileDriving = viewModel::toggleRecommendWhileDriving,
                         onEditPreferences = { showPreferenceSheet = true },
                         onRestricted = viewModel::showParkingRequired,
+                        isDemoActive = state.demoStart != null,
+                        onOpenDemo = { showDemoPicker = true },
                     )
                 }
 
-                if (activeDriveRoute == null) {
+                if (activeDriveRoute == null && !showDemoPicker) {
                     suggestionCard?.invoke(
                         Modifier
                             .align(Alignment.TopCenter)
@@ -211,7 +229,7 @@ fun ACARiveApp(
             }
         }
 
-        if (activeDriveRouteId != null) {
+        if (activeDriveRouteId != null || showDemoPicker) {
             content(Modifier.fillMaxSize())
         } else if (isWide) {
             Row(Modifier.fillMaxSize()) {
@@ -279,7 +297,7 @@ private fun rememberStartupLocationRequest(onGranted: () -> Unit) {
 
 /** 위치 권한을 확인(필요하면 요청)한 뒤 기록을 시작하는 동작을 돌려준다. */
 @Composable
-private fun rememberRecordingStarter(onStart: () -> Unit, onDenied: () -> Unit): () -> Unit {
+private fun rememberRecordingStarter(isDemo: Boolean, onStart: () -> Unit, onDenied: () -> Unit): () -> Unit {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) onStart() else onDenied()
@@ -287,7 +305,7 @@ private fun rememberRecordingStarter(onStart: () -> Unit, onDenied: () -> Unit):
     return {
         val hasPermission = ContextCompat.checkSelfPermission(context, PleosLocation.PERMISSION) ==
             PackageManager.PERMISSION_GRANTED
-        if (USE_MOCK_LOCATION || hasPermission) onStart() else launcher.launch(PleosLocation.PERMISSION)
+        if (USE_MOCK_LOCATION || isDemo || hasPermission) onStart() else launcher.launch(PleosLocation.PERMISSION)
     }
 }
 

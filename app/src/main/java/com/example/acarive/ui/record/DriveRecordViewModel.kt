@@ -10,11 +10,13 @@ import com.example.acarive.data.drive.RoutePoint
 import com.example.acarive.data.drive.saveDrive
 import com.example.acarive.data.drive.toDriveSummary
 import com.example.acarive.data.model.DriveSummary
+import com.example.acarive.location.DemoDrive
 import com.example.acarive.location.LocationPoint
 import com.example.acarive.location.PleosLocation
 import com.example.acarive.location.mockRoute
 import com.example.acarive.video.makeMapBackground
 import com.example.acarive.video.makeRouteVideo
+import com.example.acarive.video.saveVideoToDownloads
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +58,7 @@ class DriveRecordViewModel(application: Application) : AndroidViewModel(applicat
     private var recordingJob: Job? = null
     private var startTime = 0L
     private var videoJob: Job? = null
+    private var downloadJob: Job? = null
 
     private val _uiState = MutableStateFlow(DriveRecordUiState())
     val uiState: StateFlow<DriveRecordUiState> = _uiState.asStateFlow()
@@ -71,7 +74,8 @@ class DriveRecordViewModel(application: Application) : AndroidViewModel(applicat
     /** 위치 권한을 받은 뒤에 호출한다. */
     fun startRecording() {
         if (recordingJob != null) return
-        if (!USE_MOCK_LOCATION) {
+        // 데모 주행이면 Pleos 위치 없이 시뮬레이션 위치만 기록한다
+        if (!USE_MOCK_LOCATION && !DemoDrive.isActive) {
             val source = location ?: PleosLocation(getApplication()).also { location = it }
             source.start()
         }
@@ -81,7 +85,11 @@ class DriveRecordViewModel(application: Application) : AndroidViewModel(applicat
         recordingJob = viewModelScope.launch {
             var i = 0
             while (true) {
-                val point = if (USE_MOCK_LOCATION) mockRoute[i % mockRoute.size] else location?.latest
+                val point = when {
+                    USE_MOCK_LOCATION -> mockRoute[i % mockRoute.size]
+                    DemoDrive.isActive -> DemoDrive.position
+                    else -> location?.latest
+                }
                 if (point != null) {
                     recorded.add(point)
                     _uiState.update { it.copy(recordedCount = recorded.size) }
@@ -154,6 +162,21 @@ class DriveRecordViewModel(application: Application) : AndroidViewModel(applicat
                 setVideo(sessionId, DriveVideoState.Failed("영상을 만들지 못했어요"))
             } finally {
                 videoJob = null
+            }
+        }
+    }
+
+    /** 펼친 드라이브의 영상을 기기 다운로드 폴더에 저장한다. 저장 중에 또 누르면 무시한다. */
+    fun downloadVideo(onFinished: (saved: Boolean) -> Unit) {
+        val state = _uiState.value
+        val sessionId = state.expandedSessionId ?: return
+        val video = state.video as? DriveVideoState.Ready ?: return
+        if (downloadJob != null) return
+        downloadJob = viewModelScope.launch {
+            try {
+                onFinished(saveVideoToDownloads(getApplication(), video.file, "aCARive_drive_$sessionId.mp4"))
+            } finally {
+                downloadJob = null
             }
         }
     }

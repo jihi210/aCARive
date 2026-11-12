@@ -38,6 +38,7 @@ enum class AppIcon(vararg val paths: String) {
     Music("M9 18V5l10-2v13", circle(6f, 18f, 3f), circle(16f, 16f, 3f)),
     Share(circle(18f, 5f, 2f), circle(6f, 12f, 2f), circle(18f, 19f, 2f), "m8 11 8-5M8 13l8 5"),
     Check("m5 12 4 4L19 6"),
+    Download("M12 4v11", "m7 10 5 5 5-5", "M5 20h14"),
 }
 
 private fun AppIcon.toImageVector(filled: Boolean, strokeWidth: Float): ImageVector {

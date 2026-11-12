@@ -17,6 +17,7 @@ import com.example.acarive.data.course.toRoute
 import com.example.acarive.data.favorite.FavoriteRepository
 import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.data.profile.ProfileRepository
+import com.example.acarive.location.DemoDrive
 import com.example.acarive.location.LocationPoint
 import com.example.acarive.music.DriveMusic
 import com.example.acarive.music.SpotifyStatus
@@ -34,8 +35,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -54,6 +57,11 @@ private const val RECOMMEND_MOVE_KM = 5.0
 private const val SUGGEST_INTERVAL_MS = 30 * 60_000L
 private const val SUGGEST_RETRY_MS = 2 * 60_000L
 private const val SUGGEST_COUNT = 2
+// 데모 주행 중에는 시연할 수 있게 훨씬 자주 추천한다
+private const val DEMO_SUGGEST_INTERVAL_MS = 20_000L
+private const val DEMO_SUGGEST_RETRY_MS = 10_000L
+// 데모 자유 주행(기록만)은 가장 가까운 코스 출발점으로 달린다. 이보다 가까운 곳은 이미 도착한 걸로 본다
+private const val DEMO_MIN_TARGET_KM = 2.0
 
 // true 면 Pleos 차량 서비스 대신 목업 차량을 연결한다. 일반 폰·에뮬레이터에서 화면 확인할 때만 켠다.
 const val USE_MOCK_VEHICLE = false
@@ -81,9 +89,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // 가장 최근 위치. 주행 중 추천에 쓴다
     private var currentLocation: LocationPoint? = null
     private var location: PleosLocation? = null
-    // 위치 변화로 계산한 속도. 차량 카드에 쓴다
+    // Pleos 에서 받은 실제 위치·속도. 데모가 켜져 있으면 대신 DemoDrive 값을 쓴다 (watchLocation)
+    private val realLocation = MutableStateFlow<LocationPoint?>(null)
+    private val realSpeed = MutableStateFlow<Int?>(null)
+    // 위치 변화로 계산한 속도. 차량 카드·음악 추천에 쓴다
     private val speedKmh = MutableStateFlow<Int?>(null)
 
+    // 기록 중이거나 코스 안내 중인지 (setDriving)
+    private var isDriving = false
     private var suggestJob: Job? = null
     // 지금 안내 중인 코스. 추천에서 뺀다
     private var drivingRouteId: String? = null
@@ -105,6 +118,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         loadFavorites()
         watchMusic()
         loadCourses()
+        watchLocation()
         startLocation()
     }
 
@@ -118,11 +132,71 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val source = PleosLocation(app).also { location = it }
         source.start()
         viewModelScope.launch {
-            snapshotFlow { source.latest }.filterNotNull().collect(::onLocation)
+            snapshotFlow { source.latest }.collect { realLocation.value = it }
         }
         viewModelScope.launch {
-            snapshotFlow { source.speedKmh }.collect { speedKmh.value = it }
+            snapshotFlow { source.speedKmh }.collect { realSpeed.value = it }
         }
+    }
+
+    // 데모가 켜져 있으면 실제 위치 대신 데모 위치·속도를 쓴다
+    private fun watchLocation() {
+        viewModelScope.launch {
+            combine(DemoDrive.state, realLocation) { demo, real -> if (demo.isActive) demo.position else real }
+                .filterNotNull()
+                .distinctUntilChanged()
+                .collect(::onLocation)
+        }
+        viewModelScope.launch {
+            combine(DemoDrive.state, realSpeed) { demo, real -> if (demo.isActive) demo.speedKmh else real }
+                .distinctUntilChanged()
+                .collect { speed ->
+                    speedKmh.value = speed
+                    _uiState.update { it.copy(speedKmh = speed) }
+                }
+        }
+        viewModelScope.launch {
+            DemoDrive.state.map { it.start }.distinctUntilChanged().collect { start ->
+                _uiState.update { it.copy(demoStart = start) }
+            }
+        }
+    }
+
+    // 데모: 지도에서 찍은 곳을 현재 위치로 쓴다. 주행 중이면 거기서부터 다시 달린다
+    fun setDemoStart(point: LocationPoint) {
+        DemoDrive.setStart(point)
+        updateDemoPath()
+        showToast("데모 위치를 정했어요")
+    }
+
+    // 데모를 끄고 실제 위치로 돌아간다. 실제 위치가 없으면 기본 지점으로 추천한다
+    fun clearDemoStart() {
+        DemoDrive.clear()
+        if (realLocation.value == null && !USE_MOCK_LOCATION) {
+            origin = DEFAULT_ORIGIN
+            hasRealOrigin = false
+            currentLocation = null
+            recommend()
+        }
+        showToast("데모를 껐어요")
+    }
+
+    // 데모 주행 경로. 코스 안내 중이면 그 코스 경유지를, 기록만 하면 가장 가까운 코스 출발점으로 달린다.
+    // 출발점에 가까워지면 주행 중 추천 카드가 뜨고, 고르면 그 코스로 바뀐다
+    private fun updateDemoPath() {
+        if (!DemoDrive.isActive) return
+        val here = DemoDrive.position
+        val courses = catalog?.courses
+        if (!isDriving || here == null || courses == null) {
+            DemoDrive.stopDriving()
+            return
+        }
+        val path = drivingRouteId?.let { id -> courses.find { it.id == id }?.waypoints }
+            ?: courses.mapNotNull { it.start }
+                .filter { CourseRecommender.distanceKm(here, it) >= DEMO_MIN_TARGET_KM }
+                .minByOrNull { CourseRecommender.distanceKm(here, it) }
+                ?.let(::listOf)
+        if (path.isNullOrEmpty()) DemoDrive.stopDriving() else DemoDrive.driveAlong(path)
     }
 
     private fun onLocation(point: LocationPoint) {
@@ -166,7 +240,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private fun loadCourses() {
         viewModelScope.launch {
             try {
-                catalog = courseRepository.load()
+                val loaded = courseRepository.load()
+                catalog = loaded
+                _uiState.update { it.copy(courseStarts = loaded.courses.mapNotNull { c -> c.start }) }
                 recommend()
             } catch (e: CancellationException) {
                 throw e
@@ -292,7 +368,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // 기록 중이거나 코스 안내 중이면 주행 중으로 보고 주변 코스를 추천한다.
     // 화면에서 기록/코스 상태가 바뀔 때마다 부른다. 코스만 바뀌면 타이머는 그대로 둔다.
     fun setDriving(active: Boolean, currentRouteId: String?) {
+        val changed = active != isDriving || currentRouteId != drivingRouteId
         drivingRouteId = currentRouteId
+        isDriving = active
+        if (changed) updateDemoPath()
         if (active == (suggestJob != null)) return
         suggestJob?.cancel()
         suggestJob = null
@@ -300,12 +379,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (!active) return
         suggestedIds.clear()
         suggestJob = viewModelScope.launch {
-            var wait = SUGGEST_INTERVAL_MS
+            var found = true
             while (true) {
-                delay(wait)
-                wait = if (suggestNearby()) SUGGEST_INTERVAL_MS else SUGGEST_RETRY_MS
+                delay(suggestDelay(found))
+                found = suggestNearby()
             }
         }
+    }
+
+    // 직전에 추천을 띄웠으면 긴 간격, 주변에 없었으면 짧게 다시 본다
+    private fun suggestDelay(lastFound: Boolean): Long = when {
+        DemoDrive.isActive -> if (lastFound) DEMO_SUGGEST_INTERVAL_MS else DEMO_SUGGEST_RETRY_MS
+        lastFound -> SUGGEST_INTERVAL_MS
+        else -> SUGGEST_RETRY_MS
     }
 
     // 주변에 코스가 있으면 카드를 띄우고 true. 설정이 꺼졌거나 주변에 없으면 false
