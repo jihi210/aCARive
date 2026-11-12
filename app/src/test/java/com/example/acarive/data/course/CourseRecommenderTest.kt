@@ -61,6 +61,27 @@ class CourseRecommenderTest {
     }
 
     @Test
+    fun nearbyOnlyCloseCoursesPreferredFirst() {
+        val close = course("close", 0.03) // 약 3km
+        val closeOcean = course("closeOcean", 0.08, setOf(CourseTheme.Ocean)) // 약 9km
+        val closest = course("closest", 0.01)
+        val far = course("far", 0.2) // 약 22km
+        val recs = CourseRecommender.nearby(
+            listOf(close, closeOcean, closest, far), seoul, setOf(CourseTheme.Ocean), exclude = emptySet(), limit = 2,
+        )
+        assertEquals(listOf("closeOcean", "closest"), recs.map { it.course.id })
+    }
+
+    @Test
+    fun nearbySkipsShownAndEmptyWhenNothingClose() {
+        val close = course("close", 0.03)
+        val closest = course("closest", 0.01)
+        val shown = CourseRecommender.nearby(listOf(close, closest), seoul, emptySet(), exclude = setOf("closest"), limit = 2)
+        assertEquals(listOf("close"), shown.map { it.course.id })
+        assertTrue(CourseRecommender.nearby(listOf(course("far", 0.2)), seoul, emptySet(), emptySet(), 2).isEmpty())
+    }
+
+    @Test
     fun preferencesMatchLooseLabels() {
         val themes = CourseRecommender.themesFromPreferences(listOf("바다", "한적한 길", "노을", "없는 테마"))
         assertEquals(setOf(CourseTheme.Ocean, CourseTheme.Quiet, CourseTheme.Sunset), themes)

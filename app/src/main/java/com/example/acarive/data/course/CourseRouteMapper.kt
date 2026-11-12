@@ -1,5 +1,6 @@
 package com.example.acarive.data.course
 
+import com.example.acarive.data.model.DriveSuggestion
 import com.example.acarive.data.model.HeroRecommendation
 import com.example.acarive.data.model.Route
 import java.util.Locale
@@ -21,6 +22,12 @@ fun CourseRecommendation.toRoute(): Route = Route(
     imageUrl = (course.imageUrl ?: course.stops.firstNotNullOfOrNull { it.imageUrl })?.toHttps(),
     congestion = null,
     description = course.overview.cleanText(),
+)
+
+// 주행 중 추천 카드용. 지금 위치에서 출발점까지 시간을 함께 보여준다
+fun CourseRecommendation.toDriveSuggestion(): DriveSuggestion = DriveSuggestion(
+    route = toRoute(),
+    etaLabel = estimate?.let { "지금 위치에서 ${formatMinutes(roundTo10(it.toStartMinutes))}" } ?: course.area,
 )
 
 // originLabel: 위치를 못 받았을 때 기준 지점 이름 ("서울시청"). null 이면 현 위치

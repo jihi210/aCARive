@@ -20,6 +20,13 @@ data class HeroRecommendation(
     val etaLabel: String,
 )
 
+// 주행 중 추천 카드 한 줄
+data class DriveSuggestion(
+    val route: Route,
+    // 예: "지금 위치에서 20분"
+    val etaLabel: String,
+)
+
 data class Weather(
     val temperature: Int,
     val description: String,

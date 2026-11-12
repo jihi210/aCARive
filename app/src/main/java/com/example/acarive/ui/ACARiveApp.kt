@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,7 +34,9 @@ import com.example.acarive.location.PleosLocation
 import com.example.acarive.ui.components.AppBottomNav
 import com.example.acarive.ui.components.AppNavRail
 import com.example.acarive.ui.components.AppToast
+import com.example.acarive.ui.components.ContentMaxWidth
 import com.example.acarive.ui.drive.DriveScreen
+import com.example.acarive.ui.drive.DriveSuggestionCard
 import com.example.acarive.ui.home.HomeScreen
 import com.example.acarive.ui.my.MyScreen
 import com.example.acarive.ui.navigation.AppTab
@@ -96,6 +99,10 @@ fun ACARiveApp(
             viewModel.showToast(if (saved) "드라이브를 저장했어요" else "받은 위치가 없어 저장하지 않았어요")
         }
     }
+
+    // 코스 안내 없이 기록만 하는 주행이면 주변 코스를 주기적으로 추천한다
+    val isFreeDriving = recordState.isRecording && activeDriveRouteId == null
+    LaunchedEffect(isFreeDriving) { viewModel.setFreeDriving(isFreeDriving) }
 
     BoxWithConstraints(
         modifier = Modifier
@@ -161,7 +168,24 @@ fun ACARiveApp(
                         vehicle = state.vehicle,
                         isDrivingRestricted = state.isDrivingRestricted,
                         onOpenVehicle = openVehicleSheet,
+                        onToggleRecommendWhileDriving = viewModel::toggleRecommendWhileDriving,
                         onRestricted = viewModel::showParkingRequired,
+                    )
+                }
+
+                if (activeDriveRoute == null && state.driveSuggestions.isNotEmpty()) {
+                    DriveSuggestionCard(
+                        suggestions = state.driveSuggestions,
+                        onAccept = { route ->
+                            viewModel.dismissDriveSuggestions()
+                            activeDriveRouteId = route.id
+                        },
+                        onDismiss = viewModel::dismissDriveSuggestions,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(24.dp)
+                            .widthIn(max = ContentMaxWidth)
+                            .fillMaxWidth(),
                     )
                 }
 

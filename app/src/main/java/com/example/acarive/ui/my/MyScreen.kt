@@ -43,6 +43,7 @@ fun MyScreen(
     vehicle: VehicleInfo?,
     isDrivingRestricted: Boolean,
     onOpenVehicle: () -> Unit,
+    onToggleRecommendWhileDriving: () -> Unit,
     onRestricted: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -77,8 +78,7 @@ fun MyScreen(
                 icon = AppIcon.Bell,
                 label = "주행 중 코스 추천",
                 value = if (profile.recommendWhileDriving) "켜짐" else "꺼짐",
-                // TODO(backend): 주행 중 추천 on/off 설정 저장. 알림 방식(Y/N 응답)은 기획 논의 필요
-                onClick = whenParked {},
+                onClick = whenParked(onToggleRecommendWhileDriving),
             )
             HorizontalLine()
             SettingRow(
@@ -186,6 +186,6 @@ private fun SettingRow(
 @Composable
 private fun MyScreenPreview() {
     ACARiveTheme {
-        MyScreen(SampleData.profile, vehicle = null, isDrivingRestricted = false, onOpenVehicle = {}, onRestricted = {})
+        MyScreen(SampleData.profile, vehicle = null, isDrivingRestricted = false, onOpenVehicle = {}, onToggleRecommendWhileDriving = {}, onRestricted = {})
     }
 }

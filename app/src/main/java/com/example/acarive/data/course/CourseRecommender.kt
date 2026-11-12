@@ -60,6 +60,29 @@ object CourseRecommender {
                     .thenBy { abs((it.estimate?.roundTripMinutes ?: 0) - TARGET_MINUTES) },
             )
 
+    // 주행 중 추천: 출발점이 지금 위치에서 이 직선거리 안인 코스만 (도로로 15분 안팎)
+    const val NEARBY_KM = 10.0
+
+    // 주행 중 추천. 출발점이 가까운 코스만 -> 취향 테마 많이 겹침 -> 가까운 순.
+    // exclude: 이번 주행에서 이미 보여준 코스
+    fun nearby(
+        courses: List<DriveCourse>,
+        here: LocationPoint,
+        preferred: Set<CourseTheme>,
+        exclude: Set<String>,
+        limit: Int,
+    ): List<CourseRecommendation> =
+        courses
+            .filter { it.id !in exclude && it.waypoints.isNotEmpty() }
+            .map { it to distanceKm(here, it.waypoints.first()) }
+            .filter { (_, km) -> km <= NEARBY_KM }
+            .sortedWith(
+                compareByDescending<Pair<DriveCourse, Double>> { (c, _) -> (c.themes intersect preferred).size }
+                    .thenBy { (_, km) -> km },
+            )
+            .take(limit)
+            .map { (c, _) -> CourseRecommendation(c, estimate(here, c), c.themes intersect preferred) }
+
     fun estimate(origin: LocationPoint, course: DriveCourse): DriveEstimate? {
         val points = course.waypoints
         if (points.isEmpty()) return null

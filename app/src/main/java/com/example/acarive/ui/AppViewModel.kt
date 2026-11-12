@@ -12,6 +12,7 @@ import com.example.acarive.data.course.CourseCatalog
 import com.example.acarive.data.course.CourseCatalogRepository
 import com.example.acarive.data.course.CourseRecommender
 import com.example.acarive.data.course.heroFor
+import com.example.acarive.data.course.toDriveSuggestion
 import com.example.acarive.data.course.toRoute
 import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.data.profile.ProfileRepository
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import kotlin.math.roundToInt
 
 private const val TOAST_DURATION_MS = 2_200L
@@ -42,6 +44,11 @@ private val DEFAULT_ORIGIN = LocationPoint(37.5665, 126.9780)
 private const val DEFAULT_ORIGIN_LABEL = "서울시청"
 // 이만큼 움직였을 때만 추천을 다시 계산한다
 private const val RECOMMEND_MOVE_KM = 5.0
+
+// 주행 중 추천: 30분마다 주변 코스 2개. 주변에 없으면 잠깐 뒤 다시 본다
+private const val SUGGEST_INTERVAL_MS = 30 * 60_000L
+private const val SUGGEST_RETRY_MS = 2 * 60_000L
+private const val SUGGEST_COUNT = 2
 
 // true 면 Pleos 차량 서비스 대신 목업 차량을 연결한다. 일반 폰·에뮬레이터에서 화면 확인할 때만 켠다.
 const val USE_MOCK_VEHICLE = false
@@ -65,9 +72,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // 추천 기준 위치. 실제 위치를 받기 전에는 기본 지점
     private var origin: LocationPoint = if (USE_MOCK_LOCATION) mockRoute.first() else DEFAULT_ORIGIN
     private var hasRealOrigin = USE_MOCK_LOCATION
+    // 가장 최근 위치. 주행 중 추천에 쓴다
+    private var currentLocation: LocationPoint? = null
     private var location: PleosLocation? = null
     // 위치 변화로 계산한 속도. 차량 카드에 쓴다
     private val speedKmh = MutableStateFlow<Int?>(null)
+
+    private var suggestJob: Job? = null
+    // 이번 주행에서 이미 보여준 코스는 다시 추천하지 않는다
+    private val suggestedIds = mutableSetOf<String>()
 
     private var vehicle: PleosVehicle? = null
     private var vehicleJob: Job? = null
@@ -96,6 +109,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun onLocation(point: LocationPoint) {
+        currentLocation = point
         if (hasRealOrigin && CourseRecommender.distanceKm(origin, point) < RECOMMEND_MOVE_KM) return
         origin = point
         hasRealOrigin = true
@@ -164,6 +178,58 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 favoriteRouteIds = if (routeId in favorites) favorites - routeId else favorites + routeId,
             )
         }
+    }
+
+    fun toggleRecommendWhileDriving() {
+        val enabled = !_uiState.value.profile.recommendWhileDriving
+        if (!enabled) dismissDriveSuggestions()
+        viewModelScope.launch {
+            try {
+                profileRepository.setRecommendWhileDriving(enabled)
+                showToast(if (enabled) "주행 중 코스 추천을 켰어요" else "주행 중 코스 추천을 껐어요")
+            } catch (e: IOException) {
+                Log.e(TAG, "설정 저장 실패", e)
+                showToast("설정을 저장하지 못했어요")
+            }
+        }
+    }
+
+    // 기록 중이면서 코스 안내 중이 아닐 때 = 자유 주행. 이때만 주변 코스를 추천한다.
+    // 화면에서 기록/코스 상태가 바뀔 때마다 부른다.
+    fun setFreeDriving(active: Boolean) {
+        if (active == (suggestJob != null)) return
+        suggestJob?.cancel()
+        suggestJob = null
+        dismissDriveSuggestions()
+        if (!active) return
+        suggestedIds.clear()
+        suggestJob = viewModelScope.launch {
+            var wait = SUGGEST_INTERVAL_MS
+            while (true) {
+                delay(wait)
+                wait = if (suggestNearby()) SUGGEST_INTERVAL_MS else SUGGEST_RETRY_MS
+            }
+        }
+    }
+
+    // 주변에 코스가 있으면 카드를 띄우고 true. 설정이 꺼졌거나 주변에 없으면 false
+    private fun suggestNearby(): Boolean {
+        val state = _uiState.value
+        if (!state.profile.recommendWhileDriving) return false
+        val catalog = catalog ?: return false
+        val here = currentLocation ?: origin.takeIf { hasRealOrigin } ?: return false
+        val preferred = CourseRecommender.themesFromPreferences(state.profile.preferences)
+        val recs = CourseRecommender.nearby(catalog.courses, here, preferred, suggestedIds, SUGGEST_COUNT)
+        if (recs.isEmpty()) return false
+        suggestedIds += recs.map { it.course.id }
+        // 답하지 않은 이전 카드는 새 추천으로 바꾼다
+        _uiState.update { it.copy(driveSuggestions = recs.map { r -> r.toDriveSuggestion() }) }
+        return true
+    }
+
+    // "괜찮아요" 또는 코스를 골랐을 때
+    fun dismissDriveSuggestions() {
+        _uiState.update { it.copy(driveSuggestions = emptyList()) }
     }
 
     // 현대차만 지원. 로그인 없이 Pleos Connect 차량 서비스에서 바로 데이터를 받는다.
