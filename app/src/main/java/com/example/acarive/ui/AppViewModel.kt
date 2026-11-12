@@ -79,6 +79,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val speedKmh = MutableStateFlow<Int?>(null)
 
     private var suggestJob: Job? = null
+    // 지금 안내 중인 코스. 추천에서 뺀다
+    private var drivingRouteId: String? = null
     // 이번 주행에서 이미 보여준 코스는 다시 추천하지 않는다
     private val suggestedIds = mutableSetOf<String>()
 
@@ -183,10 +185,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleRecommendWhileDriving() {
         val enabled = !_uiState.value.profile.recommendWhileDriving
         if (!enabled) dismissDriveSuggestions()
+        saveProfile(if (enabled) "주행 중 코스 추천을 켰어요" else "주행 중 코스 추천을 껐어요") {
+            setRecommendWhileDriving(enabled)
+        }
+    }
+
+    // 저장하면 loadProfile 이 받아서 홈 추천도 다시 계산한다
+    fun savePreferences(preferences: List<String>) {
+        saveProfile("취향을 저장했어요") { setPreferences(preferences) }
+    }
+
+    private fun saveProfile(doneMessage: String, save: suspend ProfileRepository.() -> Unit) {
         viewModelScope.launch {
             try {
-                profileRepository.setRecommendWhileDriving(enabled)
-                showToast(if (enabled) "주행 중 코스 추천을 켰어요" else "주행 중 코스 추천을 껐어요")
+                profileRepository.save()
+                showToast(doneMessage)
             } catch (e: IOException) {
                 Log.e(TAG, "설정 저장 실패", e)
                 showToast("설정을 저장하지 못했어요")
@@ -194,9 +207,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 기록 중이면서 코스 안내 중이 아닐 때 = 자유 주행. 이때만 주변 코스를 추천한다.
-    // 화면에서 기록/코스 상태가 바뀔 때마다 부른다.
-    fun setFreeDriving(active: Boolean) {
+    // 기록 중이거나 코스 안내 중이면 주행 중으로 보고 주변 코스를 추천한다.
+    // 화면에서 기록/코스 상태가 바뀔 때마다 부른다. 코스만 바뀌면 타이머는 그대로 둔다.
+    fun setDriving(active: Boolean, currentRouteId: String?) {
+        drivingRouteId = currentRouteId
         if (active == (suggestJob != null)) return
         suggestJob?.cancel()
         suggestJob = null
@@ -219,7 +233,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val catalog = catalog ?: return false
         val here = currentLocation ?: origin.takeIf { hasRealOrigin } ?: return false
         val preferred = CourseRecommender.themesFromPreferences(state.profile.preferences)
-        val recs = CourseRecommender.nearby(catalog.courses, here, preferred, suggestedIds, SUGGEST_COUNT)
+        val exclude = suggestedIds + listOfNotNull(drivingRouteId)
+        val recs = CourseRecommender.nearby(catalog.courses, here, preferred, exclude, SUGGEST_COUNT)
         if (recs.isEmpty()) return false
         suggestedIds += recs.map { it.course.id }
         // 답하지 않은 이전 카드는 새 추천으로 바꾼다

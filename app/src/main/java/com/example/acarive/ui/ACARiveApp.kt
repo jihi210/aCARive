@@ -45,6 +45,7 @@ import com.example.acarive.ui.record.RecordScreen
 import com.example.acarive.ui.record.USE_MOCK_LOCATION
 import com.example.acarive.ui.route.RouteScreen
 import com.example.acarive.ui.saved.SavedScreen
+import com.example.acarive.ui.sheets.PreferenceSheet
 import com.example.acarive.ui.sheets.RouteDetailSheet
 import com.example.acarive.ui.sheets.VehicleConnectSheet
 import com.example.acarive.ui.theme.AppTheme
@@ -64,6 +65,7 @@ fun ACARiveApp(
     var selectedRouteId by rememberSaveable { mutableStateOf<String?>(null) }
     var activeDriveRouteId by rememberSaveable { mutableStateOf<String?>(null) }
     var showVehicleSheet by rememberSaveable { mutableStateOf(false) }
+    var showPreferenceSheet by rememberSaveable { mutableStateOf(false) }
 
     val selectRoute: (String) -> Unit = { selectedRouteId = it }
     val openVehicleSheet = { showVehicleSheet = true }
@@ -100,9 +102,21 @@ fun ACARiveApp(
         }
     }
 
-    // 코스 안내 없이 기록만 하는 주행이면 주변 코스를 주기적으로 추천한다
-    val isFreeDriving = recordState.isRecording && activeDriveRouteId == null
-    LaunchedEffect(isFreeDriving) { viewModel.setFreeDriving(isFreeDriving) }
+    // 기록 중이거나 코스 안내 중이면 주변 코스를 주기적으로 추천한다
+    val isDriving = recordState.isRecording || activeDriveRouteId != null
+    LaunchedEffect(isDriving, activeDriveRouteId) { viewModel.setDriving(isDriving, activeDriveRouteId) }
+    // 코스를 고르면 그 코스로 안내한다 (안내 중이면 코스를 바꾼다). 기록은 이어서 한다
+    val suggestionCard: (@Composable (Modifier) -> Unit)? = if (state.driveSuggestions.isEmpty()) null else { cardModifier ->
+        DriveSuggestionCard(
+            suggestions = state.driveSuggestions,
+            onAccept = { route ->
+                viewModel.dismissDriveSuggestions()
+                activeDriveRouteId = route.id
+            },
+            onDismiss = viewModel::dismissDriveSuggestions,
+            modifier = cardModifier,
+        )
+    }
 
     BoxWithConstraints(
         modifier = Modifier
@@ -124,6 +138,7 @@ fun ACARiveApp(
                             if (recordState.isRecording) finishRecording()
                             activeDriveRouteId = null
                         },
+                        suggestion = suggestionCard?.let { card -> { card(Modifier.fillMaxWidth()) } },
                     )
                 } else when (activeTab) {
                     AppTab.Home -> HomeScreen(
@@ -169,19 +184,14 @@ fun ACARiveApp(
                         isDrivingRestricted = state.isDrivingRestricted,
                         onOpenVehicle = openVehicleSheet,
                         onToggleRecommendWhileDriving = viewModel::toggleRecommendWhileDriving,
+                        onEditPreferences = { showPreferenceSheet = true },
                         onRestricted = viewModel::showParkingRequired,
                     )
                 }
 
-                if (activeDriveRoute == null && state.driveSuggestions.isNotEmpty()) {
-                    DriveSuggestionCard(
-                        suggestions = state.driveSuggestions,
-                        onAccept = { route ->
-                            viewModel.dismissDriveSuggestions()
-                            activeDriveRouteId = route.id
-                        },
-                        onDismiss = viewModel::dismissDriveSuggestions,
-                        modifier = Modifier
+                if (activeDriveRoute == null) {
+                    suggestionCard?.invoke(
+                        Modifier
                             .align(Alignment.TopCenter)
                             .padding(24.dp)
                             .widthIn(max = ContentMaxWidth)
@@ -224,6 +234,15 @@ fun ACARiveApp(
                 requestRecording()
             },
             onDismiss = { selectedRouteId = null },
+        )
+    }
+
+    if (showPreferenceSheet) {
+        PreferenceSheet(
+            current = state.profile.preferences,
+            isDrivingRestricted = state.isDrivingRestricted,
+            onSave = viewModel::savePreferences,
+            onDismiss = { showPreferenceSheet = false },
         )
     }
 

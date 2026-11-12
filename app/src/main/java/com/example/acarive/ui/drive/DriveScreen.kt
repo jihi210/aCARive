@@ -55,6 +55,8 @@ fun DriveScreen(
     speedKph: Int,
     onEndDrive: () -> Unit,
     modifier: Modifier = Modifier,
+    // 주행 중 추천 카드. 길안내 배너 바로 아래에 띄운다
+    suggestion: (@Composable () -> Unit)? = null,
 ) {
     Box(
         modifier = modifier
@@ -66,16 +68,22 @@ fun DriveScreen(
             modifier = Modifier.fillMaxSize(),
         )
 
-        GuidanceBanner(
-            distanceToTurn = "214 m",
-            instruction = "우회전",
-            nextDistance = "90 m",
+        Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(horizontal = 32.dp, vertical = 24.dp)
                 .widthIn(max = ContentMaxWidth)
                 .fillMaxWidth(),
-        )
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            GuidanceBanner(
+                distanceToTurn = "214 m",
+                instruction = "우회전",
+                nextDistance = "90 m",
+                modifier = Modifier.fillMaxWidth(),
+            )
+            suggestion?.invoke()
+        }
 
         DriveBottomPanel(
             speedKph = speedKph,

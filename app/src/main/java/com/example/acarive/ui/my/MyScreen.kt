@@ -44,6 +44,7 @@ fun MyScreen(
     isDrivingRestricted: Boolean,
     onOpenVehicle: () -> Unit,
     onToggleRecommendWhileDriving: () -> Unit,
+    onEditPreferences: () -> Unit,
     onRestricted: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -61,8 +62,7 @@ fun MyScreen(
         Spacer(Modifier.height(16.dp))
         PreferenceCard(
             preferences = profile.preferences,
-            // TODO(backend): 취향(명시적 프로필) 설문 화면 + 저장 API (시안에 화면 없음)
-            onReset = whenParked {},
+            onReset = whenParked(onEditPreferences),
         )
         Spacer(Modifier.height(32.dp))
         Column(Modifier.clip(CardShape).background(colors.surface)) {
@@ -186,6 +186,6 @@ private fun SettingRow(
 @Composable
 private fun MyScreenPreview() {
     ACARiveTheme {
-        MyScreen(SampleData.profile, vehicle = null, isDrivingRestricted = false, onOpenVehicle = {}, onToggleRecommendWhileDriving = {}, onRestricted = {})
+        MyScreen(SampleData.profile, vehicle = null, isDrivingRestricted = false, onOpenVehicle = {}, onToggleRecommendWhileDriving = {}, onEditPreferences = {}, onRestricted = {})
     }
 }

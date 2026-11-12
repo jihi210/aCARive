@@ -27,7 +27,7 @@ data class AppUiState(
     val isPlaying: Boolean = false,
     /** null 이면 차량 미연결 상태 */
     val vehicle: VehicleInfo? = null,
-    // 주행 중 추천 카드. 비어 있으면 카드를 띄우지 않는다 (AppViewModel.setFreeDriving)
+    // 주행 중 추천 카드. 비어 있으면 카드를 띄우지 않는다 (AppViewModel.setDriving)
     val driveSuggestions: List<DriveSuggestion> = emptyList(),
     val toastMessage: String? = null,
 )
