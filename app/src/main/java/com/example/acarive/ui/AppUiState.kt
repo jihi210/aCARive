@@ -8,6 +8,7 @@ import com.example.acarive.data.model.Route
 import com.example.acarive.data.model.UserProfile
 import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.data.model.Weather
+import com.example.acarive.music.SpotifyStatus
 
 data class AppUiState(
     // 저장된 값을 읽기 전에는 기본값 (AppViewModel.loadProfile)
@@ -16,7 +17,9 @@ data class AppUiState(
     val routes: List<Route> = emptyList(),
     val hero: HeroRecommendation? = null,
     val weather: Weather = SampleData.weather,
-    val nowPlaying: NowPlaying = SampleData.nowPlaying,
+    // 홈 플레이리스트 카드. AppViewModel 이 시작하자마자 DriveMusic.card 로 채운다
+    val nowPlaying: NowPlaying = NowPlaying("", "", "", emptyList()),
+    val spotify: SpotifyStatus = SpotifyStatus.Disconnected,
     val favoriteRouteIds: Set<String> = emptySet(),
     val isDriveMode: Boolean = true,
     /**

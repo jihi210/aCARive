@@ -20,27 +20,47 @@ class SpotifyPlayer(
     private val _nowPlaying = MutableStateFlow<NowPlaying?>(null)
     override val nowPlaying: StateFlow<NowPlaying?> = _nowPlaying.asStateFlow()
 
-    suspend fun connect(): Result<Unit> = suspendCancellableCoroutine { cont ->
+    // 연결된 뒤 Spotify 앱이 꺼지거나 연결이 끊기면 false 로 바뀐다
+    private val _connected = MutableStateFlow(false)
+    val connected: StateFlow<Boolean> = _connected.asStateFlow()
+
+    // showAuthView: 처음 연결할 때 Spotify 권한 화면을 띄울지. 앱 시작 시 자동 재연결은 false
+    suspend fun connect(showAuthView: Boolean = true): Result<Unit> = suspendCancellableCoroutine { cont ->
         val params = ConnectionParams.Builder(clientId)
             .setRedirectUri(redirectUri)
-            .showAuthView(true)
+            .showAuthView(showAuthView)
             .build()
         SpotifyAppRemote.connect(context, params, object : Connector.ConnectionListener {
             override fun onConnected(appRemote: SpotifyAppRemote) {
                 remote = appRemote
+                _connected.value = true
                 appRemote.playerApi.subscribeToPlayerState().setEventCallback { state ->
                     val track = state.track
                     _nowPlaying.value = if (track == null) null
-                    else NowPlaying(track.uri, track.duration, state.isPaused)
+                    else NowPlaying(track.uri, track.duration, state.isPaused, track.name.orEmpty(), track.artist?.name.orEmpty())
                 }
-                cont.resume(Result.success(Unit))
+                if (cont.isActive) cont.resume(Result.success(Unit))
             }
-            override fun onFailure(error: Throwable) { cont.resume(Result.failure(error)) }
+            // 연결 실패뿐 아니라 연결된 뒤 끊겼을 때도 불린다. 이미 돌려준 continuation 은 다시 건드리지 않는다
+            override fun onFailure(error: Throwable) {
+                remote = null
+                _connected.value = false
+                _nowPlaying.value = null
+                if (cont.isActive) cont.resume(Result.failure(error))
+            }
         })
     }
 
     override fun play(uri: String) { remote?.playerApi?.play(uri) }
     override fun enqueue(uri: String) { remote?.playerApi?.queue(uri) }
     override fun skipNext() { remote?.playerApi?.skipNext() }
-    override fun release() { remote?.let { SpotifyAppRemote.disconnect(it) } }
+    fun pause() { remote?.playerApi?.pause() }
+    fun resume() { remote?.playerApi?.resume() }
+
+    override fun release() {
+        remote?.let { SpotifyAppRemote.disconnect(it) }
+        remote = null
+        _connected.value = false
+        _nowPlaying.value = null
+    }
 }

@@ -74,6 +74,7 @@ data class DriveSummary(
 // 기본값 = 처음 설치했을 때 상태 (ProfileRepository)
 data class UserProfile(
     val preferences: List<String> = emptyList(),
+    // Spotify 를 연결해 둔 적이 있으면 true. 앱을 켤 때 자동으로 다시 연결한다 (실제 연결 상태는 AppUiState.spotify)
     val spotifyConnected: Boolean = false,
     val recommendWhileDriving: Boolean = true,
 )

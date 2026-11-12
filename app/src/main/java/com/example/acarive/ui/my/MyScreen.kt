@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.example.acarive.data.SampleData
 import com.example.acarive.data.model.UserProfile
 import com.example.acarive.data.model.VehicleInfo
+import com.example.acarive.music.SpotifyStatus
 import com.example.acarive.ui.components.AppIcon
 import com.example.acarive.ui.components.AppIconImage
 import com.example.acarive.ui.components.CardShape
@@ -43,6 +44,8 @@ fun MyScreen(
     vehicle: VehicleInfo?,
     isDrivingRestricted: Boolean,
     onOpenVehicle: () -> Unit,
+    spotify: SpotifyStatus,
+    onToggleSpotify: () -> Unit,
     onToggleRecommendWhileDriving: () -> Unit,
     onEditPreferences: () -> Unit,
     onRestricted: () -> Unit,
@@ -69,9 +72,13 @@ fun MyScreen(
             SettingRow(
                 icon = AppIcon.Music,
                 label = "Spotify 연결",
-                value = if (profile.spotifyConnected) "연결됨" else "연결 안 됨",
-                // TODO(backend): Spotify OAuth 연결/해제. 토큰은 Keystore 에 보관
-                onClick = whenParked {},
+                value = when (spotify) {
+                    SpotifyStatus.Connected -> "연결됨"
+                    SpotifyStatus.Connecting -> "연결 중"
+                    SpotifyStatus.Disconnected -> "연결 안 됨"
+                    SpotifyStatus.NotInstalled -> "앱 설치 필요"
+                },
+                onClick = whenParked(onToggleSpotify),
             )
             HorizontalLine()
             SettingRow(
@@ -186,6 +193,6 @@ private fun SettingRow(
 @Composable
 private fun MyScreenPreview() {
     ACARiveTheme {
-        MyScreen(SampleData.profile, vehicle = null, isDrivingRestricted = false, onOpenVehicle = {}, onToggleRecommendWhileDriving = {}, onEditPreferences = {}, onRestricted = {})
+        MyScreen(SampleData.profile, vehicle = null, isDrivingRestricted = false, onOpenVehicle = {}, spotify = SpotifyStatus.Connected, onToggleSpotify = {}, onToggleRecommendWhileDriving = {}, onEditPreferences = {}, onRestricted = {})
     }
 }

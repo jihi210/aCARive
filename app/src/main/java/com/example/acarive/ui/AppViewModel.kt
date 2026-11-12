@@ -18,6 +18,8 @@ import com.example.acarive.data.favorite.FavoriteRepository
 import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.data.profile.ProfileRepository
 import com.example.acarive.location.LocationPoint
+import com.example.acarive.music.DriveMusic
+import com.example.acarive.music.SpotifyStatus
 import com.example.acarive.location.PleosLocation
 import com.example.acarive.location.mockRoute
 import com.example.acarive.ui.record.USE_MOCK_LOCATION
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -89,6 +92,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val drivingRestriction = DrivingRestriction(application)
 
+    private val music = DriveMusic(application, viewModelScope, speedKmh) {
+        showToast("Spotify 연결이 끊겼어요")
+    }
+
     private var vehicle: PleosVehicle? = null
     private var vehicleJob: Job? = null
 
@@ -96,6 +103,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         watchDrivingRestriction()
         loadProfile()
         loadFavorites()
+        watchMusic()
         loadCourses()
         startLocation()
     }
@@ -189,12 +197,59 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(isDriveMode = !it.isDriveMode) }
     }
 
+    // Spotify 상태와 홈 카드를 화면 상태로. 연결해 둔 적이 있으면 앱을 켤 때 조용히 다시 연결한다
+    private fun watchMusic() {
+        viewModelScope.launch {
+            combine(music.status, music.card, music.isPlaying) { status, card, playing -> Triple(status, card, playing) }
+                .collect { (status, card, playing) ->
+                    _uiState.update { it.copy(spotify = status, nowPlaying = card, isPlaying = playing) }
+                }
+        }
+        viewModelScope.launch {
+            if (profileRepository.profile.first().spotifyConnected) music.connect(showAuthView = false)
+        }
+    }
+
+    // 홈 카드 재생 버튼. 연결 전이면 연결부터 하고 바로 추천 곡을 튼다.
+    // 오디오 포커스는 앱에서 따로 처리하지 않는다. 소리는 Spotify 앱이 내고(App Remote 는 원격 조종만),
+    // 길안내 음성이 나오면 차량 오디오(CarAudioService)가 음악 볼륨을 자동으로 낮춘다.
+    // 이 앱이 포커스를 요청하면 오히려 Spotify 재생을 끊게 된다.
     fun togglePlaying() {
-        // TODO(backend): Spotify 재생/일시정지 연동. 재생 상태는 Spotify 콜백 기준으로 갱신
-        // 오디오 포커스는 앱에서 따로 처리하지 않는다. 소리는 Spotify 앱이 내고(App Remote 는 원격 조종만),
-        // 길안내 음성이 나오면 차량 오디오(CarAudioService)가 음악 볼륨을 자동으로 낮춘다.
-        // 이 앱이 포커스를 요청하면 오히려 Spotify 재생을 끊게 된다.
-        _uiState.update { it.copy(isPlaying = !it.isPlaying) }
+        viewModelScope.launch {
+            if (music.status.value != SpotifyStatus.Connected && !connectSpotify()) return@launch
+            music.togglePlay()
+        }
+    }
+
+    // 마이 화면 "Spotify 연결". 연결돼 있으면 해제한다
+    fun toggleSpotify() {
+        if (music.status.value == SpotifyStatus.Connected) {
+            music.disconnect()
+            saveProfile("Spotify 연결을 해제했어요") { setSpotifyConnected(false) }
+            return
+        }
+        viewModelScope.launch {
+            if (connectSpotify()) showToast("Spotify가 연결됐어요")
+        }
+    }
+
+    // 실패하면 안내를 띄우고 false. 성공하면 다음에 앱을 켤 때 자동으로 연결하도록 저장한다
+    private suspend fun connectSpotify(): Boolean {
+        if (music.status.value == SpotifyStatus.Connecting) return false
+        if (!music.isInstalled()) {
+            showToast("Spotify 앱을 먼저 설치해 주세요")
+            return false
+        }
+        if (!music.connect(showAuthView = true)) {
+            showToast("Spotify에 연결하지 못했어요")
+            return false
+        }
+        try {
+            profileRepository.setSpotifyConnected(true)
+        } catch (e: IOException) {
+            Log.e(TAG, "설정 저장 실패", e)
+        }
+        return true
     }
 
     // TODO(backend): 서버가 생기면 즐겨찾기 추가/삭제 API 도 호출
@@ -311,6 +366,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     override fun onCleared() {
+        music.release()
         drivingRestriction.stop()
         location?.stop()
         stopVehicle()

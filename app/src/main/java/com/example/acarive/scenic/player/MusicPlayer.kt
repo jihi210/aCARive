@@ -9,7 +9,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class NowPlaying(val uri: String, val durationMs: Long, val isPaused: Boolean)
+// title, artist: 홈 카드 표시용 (Spotify 에서 받은 값, Mock 은 빈 값)
+data class NowPlaying(
+    val uri: String,
+    val durationMs: Long,
+    val isPaused: Boolean,
+    val title: String = "",
+    val artist: String = "",
+)
 
 interface MusicPlayer {
     val nowPlaying: StateFlow<NowPlaying?>

@@ -184,6 +184,8 @@ fun ACARiveApp(
                         vehicle = state.vehicle,
                         isDrivingRestricted = state.isDrivingRestricted,
                         onOpenVehicle = openVehicleSheet,
+                        spotify = state.spotify,
+                        onToggleSpotify = viewModel::toggleSpotify,
                         onToggleRecommendWhileDriving = viewModel::toggleRecommendWhileDriving,
                         onEditPreferences = { showPreferenceSheet = true },
                         onRestricted = viewModel::showParkingRequired,

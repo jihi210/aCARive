@@ -34,7 +34,7 @@ import com.example.acarive.ui.theme.SkyBlue
 import com.example.acarive.ui.theme.White
 import com.example.acarive.ui.theme.bold
 
-// TODO(backend): Spotify 연동. 날씨·주행 환경·속도·코스·계절·급격한 변화 감지를 반영한 플레이리스트 추천 API로 교체
+// 카드 내용은 DriveMusic.card (Spotify + 추천 엔진). 날씨는 아직 Mock
 // TODO(backend): 가이드에 따라 첫 화면에 미리 정의된 플레이리스트·최근 재생·즐겨찾기를 함께 노출 + 플레이리스트 상세 화면
 @Composable
 internal fun PlaylistSection(
