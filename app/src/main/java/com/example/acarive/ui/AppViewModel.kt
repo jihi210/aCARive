@@ -92,7 +92,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val drivingRestriction = DrivingRestriction(application)
 
-    private val music = DriveMusic(application, viewModelScope, speedKmh) {
+    private val music = DriveMusic(application, viewModelScope, speedKmh, location = { currentLocation ?: origin }) {
         showToast("Spotify 연결이 끊겼어요")
     }
 

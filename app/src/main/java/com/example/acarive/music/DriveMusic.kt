@@ -3,9 +3,11 @@ package com.example.acarive.music
 import android.content.Context
 import android.util.Log
 import com.acarive.scenic.context.ContextAggregator
+import com.acarive.scenic.context.KmaWeatherSource
 import com.acarive.scenic.context.MockWeatherSource
 import com.acarive.scenic.context.SpeedSource
 import com.acarive.scenic.context.WeatherInfo
+import com.acarive.scenic.context.WeatherSource
 import com.acarive.scenic.data.TrackRepository
 import com.acarive.scenic.domain.DrivingContext
 import com.acarive.scenic.domain.GenreGroup
@@ -18,6 +20,7 @@ import com.acarive.scenic.player.SpotifyPlayer
 import com.acarive.scenic.session.DriveSession
 import com.example.acarive.BuildConfig
 import com.example.acarive.data.model.NowPlaying
+import com.example.acarive.location.LocationPoint
 import com.spotify.android.appremote.api.SpotifyAppRemote
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -48,6 +51,8 @@ class DriveMusic(
     private val context: Context,
     private val scope: CoroutineScope,
     speedKmh: StateFlow<Int?>,
+    // 현재 위치 (날씨 조회용). 아직 못 받았으면 null 이고 날씨는 서울시청 기준으로 조회한다
+    location: () -> LocationPoint?,
     // 사용자가 끊지 않았는데 연결이 끊겼을 때 (Spotify 앱 종료 등)
     private val onConnectionLost: () -> Unit,
 ) {
@@ -58,8 +63,14 @@ class DriveMusic(
         override suspend fun currentSpeedKmh(): Double? = speedKmh.value?.toDouble()
     }
 
-    // TODO(music): KmaWeatherSource 가 올라오면 교체. 홈 날씨(SampleData.weather: 18° 가벼운 비)와 맞춘 Mock
-    private val weatherSource = MockWeatherSource(WeatherInfo(Weather.RAIN, 18.0))
+    // 기상청 단기예보. KMA_SERVICE_KEY(local.properties)가 없으면 홈 날씨(18° 가벼운 비)와 맞춘 Mock 으로 대신한다
+    private val weatherSource: WeatherSource =
+        if (BuildConfig.KMA_SERVICE_KEY.isBlank()) {
+            Log.w(TAG, "local.properties 에 KMA_SERVICE_KEY 가 없어 Mock 날씨를 쓴다")
+            MockWeatherSource(WeatherInfo(Weather.RAIN, 18.0))
+        } else {
+            KmaWeatherSource(BuildConfig.KMA_SERVICE_KEY, location)
+        }
 
     private val tracks by lazy { TrackRepository(context).load() }
 
@@ -124,6 +135,7 @@ class DriveMusic(
 
     // 재생 버튼. 처음 누르면 추천을 시작해 첫 곡을 틀고, 그 뒤로는 일시정지/다시 재생
     fun togglePlay() {
+        Log.d(TAG, "startSession 호출")
         if (_status.value != SpotifyStatus.Connected) return
         val now = player.nowPlaying.value
         when {
