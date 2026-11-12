@@ -37,6 +37,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.driveapp.car.CarModel
+import com.example.driveapp.car.CarRepository
 import com.example.driveapp.data.DriveDao
 import com.example.driveapp.data.DriveDatabase
 import com.example.driveapp.data.DriveSession
@@ -76,6 +78,35 @@ fun RecordScreen(
     var makingVideo by remember { mutableStateOf(false) }
     var videoMsg by remember { mutableStateOf("") }
     var videoFile by remember { mutableStateOf<File?>(null) }
+
+    // 영상 속 차: 마지막으로 고른 차를 기억해 두고 선택 화면에서 바꿀 수 있음
+    val carRepo = remember { CarRepository(context) }
+    var selectedCar by remember { mutableStateOf(carRepo.getSelectedCar()) }
+    var showCarPicker by remember { mutableStateOf(false) }
+
+    // 고른 드라이브를 고른 차로 영상 만들기
+    fun startVideo(car: CarModel) {
+        val s = selectedSession ?: return
+        val points = selectedPoints
+        // 같은 파일 이름으로 다시 만들기 때문에, 재생 중이던 영상을 먼저 닫아야 새 영상으로 바뀜
+        videoFile = null
+        scope.launch {
+            makingVideo = true
+            try {
+                videoMsg = "지도 준비 중..."
+                val bg = makeMapBackground(context, points, s.id)
+                videoMsg = "${car.displayName} 영상 만드는 중..."
+                val dir = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES)!!
+                videoFile = makeRouteVideo(context, bg, s, car, File(dir, "drive_${s.id}.mp4"))
+                videoMsg = ""
+            } catch (e: Exception) {
+                videoMsg = "실패: ${e.message}"
+                Log.e("VIDEO", "영상 만들기 실패", e)
+            } finally {
+                makingVideo = false
+            }
+        }
+    }
 
     // 기록 중이면 1초마다 위치 추가 + 거리 누적
     LaunchedEffect(isRecording) {
@@ -166,27 +197,12 @@ fun RecordScreen(
                 }
 
                 Spacer(Modifier.height(12.dp))
+                Text("영상 속 차: ${selectedCar.displayName}", fontSize = 20.sp, color = Color.Gray)
+                Spacer(Modifier.height(8.dp))
                 Button(
                     enabled = selectedSession != null && selectedPoints.size >= 2 && !makingVideo,
-                    onClick = {
-                        val s = selectedSession ?: return@Button
-                        scope.launch {
-                            makingVideo = true
-                            try {
-                                videoMsg = "지도 준비 중..."
-                                val bg = makeMapBackground(context, selectedPoints, s.id)
-                                videoMsg = "영상 만드는 중..."
-                                val dir = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES)!!
-                                videoFile = makeRouteVideo(context, bg, s, File(dir, "drive_${s.id}.mp4"))
-                                videoMsg = ""
-                            } catch (e: Exception) {
-                                videoMsg = "실패: ${e.message}"
-                                Log.e("VIDEO", "영상 만들기 실패", e)
-                            } finally {
-                                makingVideo = false
-                            }
-                        }
-                    }
+                    // 누르면 차 선택 화면 → 고르면 영상 생성
+                    onClick = { showCarPicker = true }
                 ) {
                     Text(if (makingVideo) "만드는 중..." else "추억 영상 만들기", fontSize = 22.sp)
                 }
@@ -214,6 +230,21 @@ fun RecordScreen(
                 .size(width = 220.dp, height = 88.dp)
         ) {
             Text(if (isRecording) "기록 종료" else "기록 시작", fontSize = 28.sp)
+        }
+
+        // 차 선택 화면 (맨 위에 덮어서 표시, 기록 중에는 열지 않음)
+        if (showCarPicker && !isRecording) {
+            CarSelectScreen(
+                initial = selectedCar,
+                onConfirm = { car ->
+                    selectedCar = car
+                    carRepo.setSelectedCar(car)   // 다음에도 이 차가 기본으로
+                    showCarPicker = false
+                    startVideo(car)
+                },
+                onDismiss = { showCarPicker = false },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 
