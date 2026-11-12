@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -36,6 +37,7 @@ import com.example.acarive.ui.theme.ACARiveTheme
 import com.example.acarive.ui.theme.AppTheme
 import com.example.acarive.ui.theme.AppType
 import com.example.acarive.ui.theme.bold
+import com.example.acarive.video.shareVideo
 import java.util.Locale
 
 @Composable
@@ -46,6 +48,7 @@ fun RecordScreen(
     onStopRecording: () -> Unit,
     onToggleDrive: (Long) -> Unit,
     onMakeVideo: () -> Unit,
+    onShareUnavailable: () -> Unit,
     isDrivingRestricted: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -88,7 +91,7 @@ fun RecordScreen(
                 HistoryRow(drive, isExpanded, onClick = { onToggleDrive(drive.sessionId) })
                 if (isExpanded) {
                     DriveRoute(state)
-                    DriveVideo(state, isDrivingRestricted, onMakeVideo)
+                    DriveVideo(state, isDrivingRestricted, onMakeVideo, onShareUnavailable)
                 }
             }
         }
@@ -198,9 +201,15 @@ private fun DriveRoute(state: DriveRecordUiState) {
 
 /** 펼친 드라이브의 추억 영상. 주행 중에는 재생하지 않는다 (NO_VIDEO). */
 @Composable
-private fun DriveVideo(state: DriveRecordUiState, isDrivingRestricted: Boolean, onMakeVideo: () -> Unit) {
+private fun DriveVideo(
+    state: DriveRecordUiState,
+    isDrivingRestricted: Boolean,
+    onMakeVideo: () -> Unit,
+    onShareUnavailable: () -> Unit,
+) {
     if (state.expandedPoints.size < 2) return
     val colors = AppTheme.colors
+    val context = LocalContext.current
     Column(Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp, bottom = 32.dp)) {
         when (val video = state.video) {
             is DriveVideoState.Ready -> if (isDrivingRestricted) {
@@ -209,6 +218,12 @@ private fun DriveVideo(state: DriveRecordUiState, isDrivingRestricted: Boolean, 
                 VideoPlayer(
                     file = video.file,
                     modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(CardShape),
+                )
+                Spacer(Modifier.height(16.dp))
+                PrimaryButton(
+                    text = "영상 공유하기",
+                    icon = AppIcon.Share,
+                    onClick = { if (!shareVideo(context, video.file)) onShareUnavailable() },
                 )
             }
             is DriveVideoState.Making ->
@@ -243,6 +258,7 @@ private fun RecordScreenPreview() {
             onStopRecording = {},
             onToggleDrive = {},
             onMakeVideo = {},
+            onShareUnavailable = {},
             isDrivingRestricted = false,
         )
     }

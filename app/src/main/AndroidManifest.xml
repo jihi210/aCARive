@@ -11,6 +11,11 @@
 
     <queries>
         <package android:name="com.spotify.music" />
+        <!-- 영상을 받을 앱이 있는지 확인 (ShareVideo.kt) -->
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="video/*" />
+        </intent>
     </queries>
 
     <application
@@ -45,6 +50,17 @@
                     android:host="spotify-auth" />
             </intent-filter>
         </activity>
+
+        <!-- 추억 영상을 다른 앱으로 공유할 때 파일 접근 권한을 넘겨준다 (ShareVideo.kt) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

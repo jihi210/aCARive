@@ -38,6 +38,9 @@ import androidx.media3.effect.TextureOverlay
 private const val DRAW_US = 4_000_000L//경로 그리기 4초
 private const val TOTAL_MS = 5_000L//영상 길이 5초
 private const val FPS = 30
+// 이 시간 동안 프레임이 하나도 안 써지면 Media3 가 내보내기를 취소한다 (기본 10초).
+// 느린 차량 기기·에뮬레이터에서는 인코더 준비만 10초 가까이 걸려서 늘려 둔다
+private const val MAX_MUXER_DELAY_MS = 30_000L
 
 @OptIn(UnstableApi::class)
 suspend fun makeRouteVideo(
@@ -66,6 +69,7 @@ suspend fun makeRouteVideo(
     suspendCancellableCoroutine { cont ->
         val transformer = Transformer.Builder(context)
             .setVideoMimeType(MimeTypes.VIDEO_H264)
+            .setMaxDelayBetweenMuxerSamplesMs(MAX_MUXER_DELAY_MS)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                     cont.resume(outFile)
@@ -103,7 +107,6 @@ private class RouteOverlay(
     private val big = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE; textSize = 52f; isFakeBoldText = true
     }
-    private val credit = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.DKGRAY; textSize = 16f }
     private val dateText = SimpleDateFormat("yyyy.MM.dd", Locale.KOREA).format(Date(s.startTime))
 
     override fun onDraw(canvas: Canvas, presentationTimeUs: Long) {
@@ -133,8 +136,6 @@ private class RouteOverlay(
         canvas.drawRoundRect(RectF(32f, h - 170f, 560f, h - 32f), 24f, 24f, panel)
         canvas.drawText("$dateText 드라이브", 60f, h - 118f, title)
         canvas.drawText("%.1f km · %d분 %d초".format(km, sec / 60, sec % 60), 60f, h - 58f, big)
-
-        val c = "© OpenStreetMap contributors"
-        canvas.drawText(c, canvas.width - credit.measureText(c) - 16f, h - 12f, credit)
+        // 지도 출처(© OpenStreetMap contributors)는 지도 스냅샷에 이미 들어 있다
     }
 }

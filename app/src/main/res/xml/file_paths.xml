@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 공유할 수 있는 폴더. 추억 영상은 Movies, 외부 저장소가 없으면 filesDir (DriveRecordViewModel.videoFile) -->
+<paths>
+    <external-files-path name="movies" path="Movies/" />
+    <files-path name="files" path="." />
+</paths>
