@@ -50,8 +50,8 @@ suspend fun makeMapBackground(
     val snapshot= suspendCancellableCoroutine < MapSnapshot>{cont->
         val snapshotter= MapSnapshotter(context,options)
         snapshotter.start(
-            { snap -> cont.resume(snap) },
-            {error -> cont.resumeWithException(IllegalStateException("지도 스냅샷 실패: $error"))}
+            { snap -> if (cont.isActive) cont.resume(snap) },
+            {error -> if (cont.isActive) cont.resumeWithException(IllegalStateException("지도 스냅샷 실패: $error"))}
         )
         cont.invokeOnCancellation { snapshotter.cancel() }
     }

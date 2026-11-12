@@ -169,7 +169,7 @@ fun ACARiveApp(
                         onStartRecording = requestRecording,
                         onStopRecording = finishRecording,
                         onToggleDrive = recordViewModel::toggleExpanded,
-                        onMakeVideo = recordViewModel::makeVideo,
+                        onMakeVideo = { car -> recordViewModel.makeVideo(car) },
                         onShareUnavailable = { viewModel.showToast("이 기기에는 영상을 보낼 앱이 없어요") },
                         isDrivingRestricted = state.isDrivingRestricted,
                     )

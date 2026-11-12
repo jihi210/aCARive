@@ -1,26 +1,36 @@
 package com.example.acarive.ui.record
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.acarive.car.CarModel
 import com.example.acarive.data.model.DriveHistoryItem
 import com.example.acarive.data.model.DriveSummary
 import com.example.acarive.ui.components.AppIcon
@@ -33,6 +43,7 @@ import com.example.acarive.ui.components.StatGrid
 import com.example.acarive.ui.components.StatItem
 import com.example.acarive.ui.components.SubPage
 import com.example.acarive.ui.components.tapClickable
+import com.example.acarive.ui.sheets.CarSelectSheet
 import com.example.acarive.ui.theme.ACARiveTheme
 import com.example.acarive.ui.theme.AppTheme
 import com.example.acarive.ui.theme.AppType
@@ -47,13 +58,27 @@ fun RecordScreen(
     onStartRecording: () -> Unit,
     onStopRecording: () -> Unit,
     onToggleDrive: (Long) -> Unit,
-    onMakeVideo: () -> Unit,
+    onMakeVideo: (CarModel) -> Unit,
     onShareUnavailable: () -> Unit,
     isDrivingRestricted: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = AppTheme.colors
     val summary = state.summary
+    var showCarSheet by rememberSaveable { mutableStateOf(false) }
+    // 차 고르기는 사진을 둘러보는 설정 작업이라 정차 중에만 시트를 연다.
+    // 주행 중에는 마지막으로 고른 차로 바로 만든다.
+    // 시트를 연 채로 출발하면 닫는다 (주차 후 저절로 다시 열리지 않게)
+    LaunchedEffect(isDrivingRestricted) {
+        if (isDrivingRestricted) showCarSheet = false
+    }
+    val requestVideo: () -> Unit = {
+        if (isDrivingRestricted) {
+            onMakeVideo(state.selectedCar)
+        } else {
+            showCarSheet = true
+        }
+    }
     SubPage(modifier) {
         PageHeader(title = "나의 주행 기록")
         RecordControl(
@@ -91,10 +116,18 @@ fun RecordScreen(
                 HistoryRow(drive, isExpanded, onClick = { onToggleDrive(drive.sessionId) })
                 if (isExpanded) {
                     DriveRoute(state)
-                    DriveVideo(state, isDrivingRestricted, onMakeVideo, onShareUnavailable)
+                    DriveVideo(state, isDrivingRestricted, requestVideo, onShareUnavailable)
                 }
             }
         }
+    }
+
+    if (showCarSheet && !isDrivingRestricted) {
+        CarSelectSheet(
+            current = state.selectedCar,
+            onConfirm = onMakeVideo,
+            onDismiss = { showCarSheet = false },
+        )
     }
 }
 
@@ -225,12 +258,35 @@ private fun DriveVideo(
                     icon = AppIcon.Share,
                     onClick = { if (!shareVideo(context, video.file)) onShareUnavailable() },
                 )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                        .clip(CardShape)
+                        .tapClickable(role = Role.Button, onClick = onMakeVideo)
+                        .heightIn(min = 80.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "다른 차로 다시 만들기",
+                        color = colors.textSecondary,
+                        style = AppType.BodySmall.copy(textDecoration = TextDecoration.Underline),
+                    )
+                }
             }
             is DriveVideoState.Making ->
                 Text(video.message, color = colors.textSecondary, style = AppType.LabelMedium)
             DriveVideoState.Idle, is DriveVideoState.Failed -> {
                 if (video is DriveVideoState.Failed) {
                     Text(video.message, color = colors.textSecondary, style = AppType.LabelMedium)
+                    Spacer(Modifier.height(16.dp))
+                }
+                if (isDrivingRestricted) {
+                    Text(
+                        "영상 속 차: ${state.selectedCar.displayName} (차는 주차 후에 바꿀 수 있어요)",
+                        color = colors.textSecondary,
+                        style = AppType.LabelMedium,
+                    )
                     Spacer(Modifier.height(16.dp))
                 }
                 PrimaryButton(text = "추억 영상 만들기", icon = AppIcon.Sparkle, onClick = onMakeVideo)
