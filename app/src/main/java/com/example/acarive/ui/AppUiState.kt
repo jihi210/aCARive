@@ -1,6 +1,8 @@
 package com.example.acarive.ui
 
 import com.example.acarive.data.SampleData
+import com.example.acarive.data.course.DriveProgress
+import com.example.acarive.navi.NaviStatus
 import com.example.acarive.location.LocationPoint
 import com.example.acarive.data.model.DriveSuggestion
 import com.example.acarive.data.model.HeroRecommendation
@@ -37,6 +39,10 @@ data class AppUiState(
     val speedKmh: Int? = null,
     // 데모 주행 출발 위치. null 이면 데모 꺼짐 (DemoDrive)
     val demoStart: LocationPoint? = null,
+    // 코스 안내 중일 때 다음 경유지·남은 거리. 안내 중이 아니면 null (AppViewModel.startCourse)
+    val driveProgress: DriveProgress? = null,
+    // 코스를 차량 내비로 보낸 상태
+    val naviStatus: NaviStatus = NaviStatus.Idle,
     // 카탈로그 코스 출발점. 데모 위치 고르는 지도에 표시한다
     val courseStarts: List<LocationPoint> = emptyList(),
     val toastMessage: String? = null,

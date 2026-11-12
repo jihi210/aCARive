@@ -32,13 +32,12 @@ import com.example.acarive.ui.components.CardShape
 import com.example.acarive.ui.components.IconActionButton
 import com.example.acarive.ui.components.PagePadding
 import com.example.acarive.ui.components.tapClickable
-import com.example.acarive.ui.theme.AlertRed
 import com.example.acarive.ui.theme.AppTheme
 import com.example.acarive.ui.theme.AppType
 import com.example.acarive.ui.theme.bold
 
 @Composable
-internal fun HomeTopBar() {
+internal fun HomeTopBar(onOpenNotifications: () -> Unit) {
     val colors = AppTheme.colors
     Row(
         modifier = Modifier
@@ -53,23 +52,14 @@ internal fun HomeTopBar() {
             modifier = Modifier.weight(1f),
         )
         Spacer(Modifier.width(16.dp))
-        Box {
-            IconActionButton(
-                icon = AppIcon.Bell,
-                contentDescription = "알림",
-                background = colors.surface,
-                tint = colors.text,
-                // TODO(backend): 알림 목록 API + 알림 화면 (시안에 화면 없음). 미확인 알림 유무로 빨간 점 표시
-                onClick = {},
-            )
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = (-14).dp, y = 14.dp)
-                    .size(16.dp)
-                    .background(AlertRed, CircleShape),
-            )
-        }
+        IconActionButton(
+            icon = AppIcon.Bell,
+            contentDescription = "알림",
+            background = colors.surface,
+            tint = colors.text,
+            // TODO(backend): 알림 목록 API + 알림 화면 (시안에 화면 없음). 미확인 알림이 생기면 빨간 점 표시
+            onClick = onOpenNotifications,
+        )
     }
 }
 

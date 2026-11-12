@@ -14,6 +14,8 @@ import com.example.acarive.data.course.CourseRecommender
 import com.example.acarive.data.course.heroFor
 import com.example.acarive.data.course.toDriveSuggestion
 import com.example.acarive.data.course.toRoute
+import com.example.acarive.data.course.CourseProgress
+import com.example.acarive.data.course.keyStops
 import com.example.acarive.data.favorite.FavoriteRepository
 import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.data.profile.ProfileRepository
@@ -21,6 +23,11 @@ import com.example.acarive.location.DemoDrive
 import com.example.acarive.location.LocationPoint
 import com.example.acarive.music.DriveMusic
 import com.example.acarive.music.SpotifyStatus
+import com.example.acarive.navi.CarNavigation
+import com.example.acarive.navi.CarNavigationListener
+import com.example.acarive.navi.NaviStatus
+import com.example.acarive.navi.NaviStop
+import ai.pleos.playground.navi.constants.NaviErrorCode
 import com.example.acarive.location.PleosLocation
 import com.example.acarive.location.mockRoute
 import com.example.acarive.ui.record.USE_MOCK_LOCATION
@@ -29,6 +36,7 @@ import com.example.acarive.vehicle.PleosVehicle
 import com.example.acarive.vehicle.VehicleData
 import com.example.acarive.vehicle.label
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -104,6 +112,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val suggestedIds = mutableSetOf<String>()
 
     private val drivingRestriction = DrivingRestriction(application)
+
+    // 코스 길안내는 차량 내비가 한다. 차량 내비가 없는 기기면 null
+    private val carNavigation: CarNavigation? =
+        if (CarNavigation.isAvailable(application)) CarNavigation(application, NaviEvents()) else null
 
     private val music = DriveMusic(application, viewModelScope, speedKmh) {
         showToast("Spotify 연결이 끊겼어요")
@@ -201,6 +213,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun onLocation(point: LocationPoint) {
         currentLocation = point
+        updateProgress(point)
         if (hasRealOrigin && CourseRecommender.distanceKm(origin, point) < RECOMMEND_MOVE_KM) return
         origin = point
         hasRealOrigin = true
@@ -368,9 +381,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // 기록 중이거나 코스 안내 중이면 주행 중으로 보고 주변 코스를 추천한다.
     // 화면에서 기록/코스 상태가 바뀔 때마다 부른다. 코스만 바뀌면 타이머는 그대로 둔다.
     fun setDriving(active: Boolean, currentRouteId: String?) {
-        val changed = active != isDriving || currentRouteId != drivingRouteId
+        val routeChanged = currentRouteId != drivingRouteId
+        val changed = active != isDriving || routeChanged
         drivingRouteId = currentRouteId
         isDriving = active
+        if (routeChanged) {
+            if (currentRouteId != null) startCourse(currentRouteId) else endCourse()
+        }
         if (changed) updateDemoPath()
         if (active == (suggestJob != null)) return
         suggestJob?.cancel()
@@ -451,7 +468,81 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         vehicle = null
     }
 
+    // 코스를 차량 내비로 보내고 진행 상황을 계산하기 시작한다. 안내 중에 코스를 바꿔도 여기로 온다
+    private fun startCourse(routeId: String) {
+        val stops = catalog?.courses?.find { it.id == routeId }?.keyStops().orEmpty()
+        if (stops.isEmpty()) {
+            _uiState.update { it.copy(driveProgress = null, naviStatus = NaviStatus.Failed) }
+            return
+        }
+        val progress = CourseProgress.start(stops, currentLocation ?: origin.takeIf { hasRealOrigin })
+        val nav = carNavigation
+        _uiState.update {
+            it.copy(driveProgress = progress, naviStatus = if (nav == null) NaviStatus.Unavailable else NaviStatus.Sending)
+        }
+        nav ?: return
+        viewModelScope.launch {
+            val sent = nav.sendRoute(stops.map { NaviStop(it.name, it.location) })
+            // 그 사이 주행을 끝냈거나 코스를 바꿨으면 무시
+            if (drivingRouteId != routeId) return@launch
+            // 내비 오류(RouteFailed)가 먼저 왔으면 덮어쓰지 않는다
+            _uiState.update {
+                if (it.naviStatus != NaviStatus.Sending) it
+                else it.copy(naviStatus = if (sent) NaviStatus.Sent else NaviStatus.Failed)
+            }
+            showToast(if (sent) "차량 내비로 코스를 보냈어요" else "차량 내비로 보내지 못했어요")
+        }
+    }
+
+    private fun endCourse() {
+        carNavigation?.cancelRoute()
+        _uiState.update { it.copy(driveProgress = null, naviStatus = NaviStatus.Idle) }
+    }
+
+    private fun updateProgress(here: LocationPoint) {
+        val progress = _uiState.value.driveProgress ?: return
+        val updated = CourseProgress.update(progress.stops, progress.nextIndex, here)
+        _uiState.update { it.copy(driveProgress = updated) }
+        if (!progress.isFinished && updated.isFinished) showToast("코스를 다 달렸어요")
+    }
+
+    // 주행 화면 "내비 보기"
+    fun openCarNavigation() {
+        val nav = carNavigation ?: return showToast("이 기기에는 차량 내비가 없어요")
+        viewModelScope.launch {
+            if (!nav.showNavigation()) showToast("차량 내비를 열지 못했어요")
+        }
+    }
+
+    // 내비 콜백은 다른 스레드로 올 수 있어서 메인에서 처리한다
+    private inner class NaviEvents : CarNavigationListener {
+        override fun onRouteFailed(code: NaviErrorCode) {
+            viewModelScope.launch(Dispatchers.Main) {
+                if (drivingRouteId == null) return@launch
+                _uiState.update { it.copy(naviStatus = NaviStatus.RouteFailed) }
+                showToast(
+                    when (code) {
+                        NaviErrorCode.CAUSE_SEARCH_ROUTE_OVER_DISTANCE -> "코스가 너무 멀어 내비가 경로를 찾지 못했어요"
+                        NaviErrorCode.CAUSE_SEARCH_ROUTE_TOO_SHORT_DISTANCE -> "출발점이 너무 가까워 내비가 경로를 찾지 못했어요"
+                        else -> "차량 내비가 경로를 찾지 못했어요"
+                    },
+                )
+            }
+        }
+
+        // 내비 기준으로 목적지에 닿으면 앱 진행도 끝낸다
+        override fun onArrived() {
+            viewModelScope.launch(Dispatchers.Main) {
+                val progress = _uiState.value.driveProgress ?: return@launch
+                if (progress.isFinished) return@launch
+                _uiState.update { it.copy(driveProgress = progress.copy(nextIndex = progress.stops.size, remainingKm = 0.0, remainingMinutes = 0)) }
+                showToast("코스를 다 달렸어요")
+            }
+        }
+    }
+
     override fun onCleared() {
+        carNavigation?.release()
         music.release()
         drivingRestriction.stop()
         location?.stop()

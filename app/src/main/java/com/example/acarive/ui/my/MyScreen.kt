@@ -90,14 +90,6 @@ fun MyScreen(
                 onClick = whenParked(onToggleRecommendWhileDriving),
             )
             HorizontalLine()
-            SettingRow(
-                icon = AppIcon.Share,
-                label = "기록 공유 설정",
-                value = null,
-                // TODO(backend): 기록 공유 설정 조회/저장 (시안에 화면 없음)
-                onClick = whenParked {},
-            )
-            HorizontalLine()
             // 시연용. 차 안에서 바로 쓸 수 있게 주행 제한을 걸지 않는다
             SettingRow(
                 icon = AppIcon.Pin,

@@ -36,7 +36,6 @@ enum class AppIcon(vararg val paths: String) {
     Close("m6 6 12 12M18 6 6 18"),
     Car("m5 16-1 2v2h2v-2h12v2h2v-2l-1-2-2-7H7Z", "M6 14h12M8 18h.01M16 18h.01"),
     Music("M9 18V5l10-2v13", circle(6f, 18f, 3f), circle(16f, 16f, 3f)),
-    Share(circle(18f, 5f, 2f), circle(6f, 12f, 2f), circle(18f, 19f, 2f), "m8 11 8-5M8 13l8 5"),
     Check("m5 12 4 4L19 6"),
     Download("M12 4v11", "m7 10 5 5 5-5", "M5 20h14"),
 }

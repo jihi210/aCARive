@@ -24,7 +24,7 @@ object SampleData {
             distance = "86 km",
             tags = listOf("강변", "한적한"),
             imageUrl = "https://images.unsplash.com/photo-1761775607993-cda287a4e1e5?auto=format&fit=crop&w=900&q=85",
-            congestion = "여유",
+            stopCount = 3,
             description = DESCRIPTION,
         ),
         Route(
@@ -35,7 +35,7 @@ object SampleData {
             distance = "112 km",
             tags = listOf("바다", "일몰"),
             imageUrl = "https://images.unsplash.com/photo-1778352490319-76e76a21f0f8?auto=format&fit=crop&w=900&q=85",
-            congestion = "여유",
+            stopCount = 3,
             description = DESCRIPTION,
         ),
         Route(
@@ -46,7 +46,7 @@ object SampleData {
             distance = "74 km",
             tags = listOf("숲길", "커브"),
             imageUrl = "https://images.unsplash.com/photo-1758384265569-f03bed6d0757?auto=format&fit=crop&w=900&q=85",
-            congestion = "여유",
+            stopCount = 3,
             description = DESCRIPTION,
         ),
     )

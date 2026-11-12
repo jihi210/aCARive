@@ -143,9 +143,13 @@ fun ACARiveApp(
                 } else if (activeDriveRoute != null) {
                     DriveScreen(
                         routeName = activeDriveRoute.name,
-                        remainingDistance = activeDriveRoute.distance,
-                        remainingTime = activeDriveRoute.duration,
-                        speedKph = state.speedKmh ?: 0,
+                        progress = state.driveProgress,
+                        naviStatus = state.naviStatus,
+                        speedKph = state.speedKmh,
+                        nowPlaying = state.nowPlaying,
+                        isPlaying = state.isPlaying,
+                        onTogglePlaying = viewModel::togglePlaying,
+                        onOpenNavigation = viewModel::openCarNavigation,
                         onEndDrive = {
                             if (recordState.isRecording) finishRecording()
                             activeDriveRouteId = null
@@ -168,6 +172,7 @@ fun ACARiveApp(
                         onToggleFavorite = viewModel::toggleFavorite,
                         onOpenAllRoutes = { activeTab = AppTab.Route },
                         onOpenRecord = { activeTab = AppTab.Record },
+                        onOpenNotifications = { viewModel.showToast("새 알림이 없어요") },
                     )
                     AppTab.Route -> RouteScreen(
                         routes = state.routes,

@@ -9,8 +9,8 @@ data class Route(
     val distance: String,
     val tags: List<String>,
     val imageUrl: String?,
-    // 혼잡도 데이터가 아직 없으면 null
-    val congestion: String?,
+    // 코스 경유지 수. 0 이면 화면에 "-"
+    val stopCount: Int,
     val description: String,
 )
 

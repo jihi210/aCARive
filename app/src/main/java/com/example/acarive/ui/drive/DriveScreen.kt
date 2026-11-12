@@ -1,7 +1,7 @@
 package com.example.acarive.ui.drive
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,255 +13,188 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.acarive.data.course.DriveProgress
+import com.example.acarive.data.course.KeyStop
+import com.example.acarive.data.course.formatMinutes
+import com.example.acarive.data.model.NowPlaying
+import com.example.acarive.location.LocationPoint
+import com.example.acarive.navi.NaviStatus
 import com.example.acarive.ui.components.AppIcon
 import com.example.acarive.ui.components.AppIconImage
 import com.example.acarive.ui.components.CardShape
 import com.example.acarive.ui.components.ContentMaxWidth
+import com.example.acarive.ui.components.PagePadding
 import com.example.acarive.ui.components.tapClickable
+import com.example.acarive.ui.home.PlaylistSection
 import com.example.acarive.ui.theme.ACARiveTheme
 import com.example.acarive.ui.theme.AppTheme
 import com.example.acarive.ui.theme.AppType
 import com.example.acarive.ui.theme.bold
+import java.util.Locale
+import kotlin.math.max
 
 /**
- * 코스 출발 후 표시하는 주행 전용 화면.
- *
- * 지도 SDK가 실제 경로를 전달하기 전에도 레이아웃을 검증할 수 있도록 [DriveMap]
- * 은 경로 형태의 플레이스홀더를 그린다. 실제 지도 연결 시 이 컴포넌트만 교체한다.
+ * 코스 출발 후 표시하는 주행 화면. 길안내는 차량 내비가 하고(Send to Car),
+ * 여기서는 코스 진행·속도·음악·주행 중 추천만 보여준다.
  */
 @Composable
 fun DriveScreen(
     routeName: String,
-    remainingDistance: String,
-    remainingTime: String,
-    speedKph: Int,
+    progress: DriveProgress?,
+    naviStatus: NaviStatus,
+    speedKph: Int?,
+    nowPlaying: NowPlaying,
+    isPlaying: Boolean,
+    onTogglePlaying: () -> Unit,
+    onOpenNavigation: () -> Unit,
     onEndDrive: () -> Unit,
     modifier: Modifier = Modifier,
-    // 주행 중 추천 카드. 길안내 배너 바로 아래에 띄운다
+    // 주행 중 추천 카드. 코스 배너 바로 아래에 띄운다
     suggestion: (@Composable () -> Unit)? = null,
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(AppTheme.colors.background),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        DriveMap(
-            routeName = routeName,
-            modifier = Modifier.fillMaxSize(),
-        )
-
+        // 음악 카드는 자체 좌우 여백(PagePadding)이 있어서 나머지 항목에만 여백을 준다
+        val itemPadding = Modifier.padding(horizontal = PagePadding)
         Column(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(horizontal = 32.dp, vertical = 24.dp)
                 .widthIn(max = ContentMaxWidth)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            GuidanceBanner(
-                distanceToTurn = "214 m",
-                instruction = "우회전",
-                nextDistance = "90 m",
-                modifier = Modifier.fillMaxWidth(),
-            )
-            suggestion?.invoke()
-        }
-
-        DriveBottomPanel(
-            speedKph = speedKph,
-            remainingDistance = remainingDistance,
-            remainingTime = remainingTime,
-            onEndDrive = onEndDrive,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .widthIn(max = ContentMaxWidth)
-                .fillMaxWidth(),
-        )
-    }
-}
-
-@Composable
-private fun GuidanceBanner(
-    distanceToTurn: String,
-    instruction: String,
-    nextDistance: String,
-    modifier: Modifier = Modifier,
-) {
-    val colors = AppTheme.colors
-    Row(
-        modifier = modifier
-            .clip(CardShape)
-            .background(colors.emphasis)
-            .padding(horizontal = 32.dp, vertical = 24.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .heightIn(min = 80.dp)
-                .clip(CardShape)
-                .background(colors.onEmphasisAccent)
-                .padding(horizontal = 20.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            AppIconImage(
-                icon = AppIcon.Chevron,
-                tint = colors.onEmphasis,
-                size = 48.dp,
-                contentDescription = "오른쪽 방향",
-            )
-        }
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = "$distanceToTurn 앞 $instruction",
-                color = colors.onEmphasis,
-                style = AppType.TitleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = "이후 $nextDistance 직진",
-                color = colors.onEmphasisSecondary,
-                style = AppType.BodySmall,
-                maxLines = 1,
-            )
-        }
-    }
-}
-
-@Composable
-private fun DriveMap(
-    routeName: String,
-    modifier: Modifier = Modifier,
-) {
-    val colors = AppTheme.colors
-    Box(
-        modifier = modifier
-            .background(colors.surfaceVariant)
-            .semantics { contentDescription = "$routeName 주행 경로 지도" },
-    ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val roadStroke = size.minDimension * 0.075f
-            val routeStroke = size.minDimension * 0.035f
-            val route = Path().apply {
-                moveTo(size.width * 0.63f, size.height * 0.02f)
-                cubicTo(
-                    size.width * 0.84f,
-                    size.height * 0.18f,
-                    size.width * 0.38f,
-                    size.height * 0.29f,
-                    size.width * 0.56f,
-                    size.height * 0.43f,
+            CourseBanner(routeName, progress, naviStatus, itemPadding.fillMaxWidth())
+            suggestion?.let { Box(itemPadding) { it() } }
+            DriveMetrics(speedKph, progress, itemPadding.fillMaxWidth())
+            if (progress != null && progress.stops.isNotEmpty()) {
+                StopList(progress, itemPadding.fillMaxWidth())
+            }
+            PlaylistSection(nowPlaying = nowPlaying, isPlaying = isPlaying, onTogglePlaying = onTogglePlaying)
+            Row(itemPadding.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                DriveButton(
+                    text = "내비 보기",
+                    icon = AppIcon.Route,
+                    primary = false,
+                    onClick = onOpenNavigation,
+                    modifier = Modifier.weight(1f),
                 )
-                cubicTo(
-                    size.width * 0.76f,
-                    size.height * 0.58f,
-                    size.width * 0.23f,
-                    size.height * 0.67f,
-                    size.width * 0.46f,
-                    size.height * 0.88f,
+                DriveButton(
+                    text = "주행 종료",
+                    icon = AppIcon.Close,
+                    primary = true,
+                    onClick = onEndDrive,
+                    modifier = Modifier.weight(1f),
                 )
             }
-
-            drawPath(
-                path = route,
-                color = colors.surface,
-                style = Stroke(width = roadStroke, cap = StrokeCap.Round),
-            )
-            drawPath(
-                path = route,
-                color = colors.emphasis,
-                style = Stroke(width = routeStroke, cap = StrokeCap.Round),
-            )
-
-            drawLine(
-                color = colors.line,
-                start = Offset(size.width * 0.04f, size.height * 0.28f),
-                end = Offset(size.width * 0.42f, size.height * 0.18f),
-                strokeWidth = routeStroke,
-                cap = StrokeCap.Round,
-            )
-            drawLine(
-                color = colors.line,
-                start = Offset(size.width * 0.66f, size.height * 0.69f),
-                end = Offset(size.width * 0.96f, size.height * 0.58f),
-                strokeWidth = routeStroke,
-                cap = StrokeCap.Round,
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .clip(CardShape)
-                .background(colors.primary)
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        ) {
-            Text("현재 위치", color = colors.onPrimary, style = AppType.LabelSmall.bold)
         }
     }
 }
 
+// 코스 이름 + 차량 내비 상태 + 다음 경유지
 @Composable
-private fun DriveBottomPanel(
-    speedKph: Int,
-    remainingDistance: String,
-    remainingTime: String,
-    onEndDrive: () -> Unit,
+private fun CourseBanner(
+    routeName: String,
+    progress: DriveProgress?,
+    naviStatus: NaviStatus,
     modifier: Modifier = Modifier,
 ) {
     val colors = AppTheme.colors
     Column(
         modifier = modifier
-            .navigationBarsPadding()
-            .padding(24.dp)
             .clip(CardShape)
-            .background(colors.surface)
-            .padding(24.dp),
+            .background(colors.emphasis)
+            .padding(horizontal = 32.dp, vertical = 24.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            DriveMetric(
-                label = "현재 속도",
-                value = speedKph.toString(),
-                unit = "km/h",
-                modifier = Modifier.weight(1f),
-            )
-            DriveMetric(
-                label = "잔여 거리",
-                value = remainingDistance,
-                modifier = Modifier.weight(1f),
-            )
-            DriveMetric(
-                label = "남은 시간",
-                value = remainingTime,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(Modifier.height(20.dp))
-        EndDriveButton(onClick = onEndDrive)
+        Text(
+            text = naviStatus.label,
+            color = colors.onEmphasisAccent,
+            style = AppType.LabelMedium.bold,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = routeName,
+            color = colors.onEmphasis,
+            style = AppType.TitleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = when {
+                progress == null -> "코스 정보를 불러오지 못했어요"
+                progress.isFinished -> "코스를 다 달렸어요"
+                else -> "다음 경유지 · ${progress.nextStop?.name}"
+            },
+            color = colors.onEmphasisSecondary,
+            style = AppType.BodySmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
+
+private val NaviStatus.label: String
+    get() = when (this) {
+        NaviStatus.Idle, NaviStatus.Sending -> "차량 내비로 보내는 중"
+        NaviStatus.Sent -> "차량 내비로 안내 중"
+        NaviStatus.Unavailable -> "차량 내비 없음 · 코스 진행만 보여드려요"
+        NaviStatus.Failed -> "차량 내비로 보내지 못했어요"
+        NaviStatus.RouteFailed -> "차량 내비가 경로를 찾지 못했어요"
+    }
+
+@Composable
+private fun DriveMetrics(speedKph: Int?, progress: DriveProgress?, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        DriveMetric(
+            label = "현재 속도",
+            value = speedKph?.toString() ?: "-",
+            unit = "km/h",
+            modifier = Modifier.weight(1f),
+        )
+        DriveMetric(
+            label = "남은 거리",
+            value = progress?.let { formatKm(it.remainingKm) } ?: "-",
+            modifier = Modifier.weight(1f),
+        )
+        DriveMetric(
+            label = "남은 시간",
+            value = when {
+                progress == null -> "-"
+                progress.isFinished -> "도착"
+                else -> formatMinutes(max(1, progress.remainingMinutes))
+            },
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+// 직선거리로 추정한 값이라 10km 넘으면 소수점은 뺀다
+private fun formatKm(km: Double): String =
+    if (km < 10) String.format(Locale.KOREA, "%.1f km", km) else String.format(Locale.KOREA, "%.0f km", km)
 
 @Composable
 private fun DriveMetric(
@@ -275,7 +208,7 @@ private fun DriveMetric(
         modifier = modifier
             .heightIn(min = 112.dp)
             .clip(CardShape)
-            .background(colors.surfaceVariant)
+            .background(colors.surface)
             .padding(horizontal = 12.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -305,40 +238,92 @@ private fun DriveMetric(
     }
 }
 
+// 차량 내비로 보낸 경유지. 지난 곳은 체크, 다음 곳은 강조
 @Composable
-private fun EndDriveButton(
+private fun StopList(progress: DriveProgress, modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
+    Column(
+        modifier = modifier
+            .clip(CardShape)
+            .background(colors.surface)
+            .padding(horizontal = 32.dp, vertical = 16.dp),
+    ) {
+        progress.stops.forEachIndexed { i, stop ->
+            val passed = i < progress.nextIndex
+            val next = i == progress.nextIndex
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(if (passed) colors.primary else Color.Transparent)
+                        .border(3.dp, if (passed || next) colors.primary else colors.line, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (passed) AppIconImage(AppIcon.Check, colors.onPrimary, size = 28.dp, strokeWidth = 3f)
+                }
+                Spacer(Modifier.width(24.dp))
+                Text(
+                    text = stop.name,
+                    color = if (passed) colors.textSecondary else colors.text,
+                    style = if (next) AppType.BodySmall.bold else AppType.BodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                if (i == progress.stops.lastIndex) {
+                    Text("도착", color = colors.textSecondary, style = AppType.LabelMedium)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DriveButton(
+    text: String,
+    icon: AppIcon,
+    primary: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = AppTheme.colors
+    val content = if (primary) colors.onPrimary else colors.text
     Row(
         modifier = modifier
-            .fillMaxWidth()
             .heightIn(min = 100.dp)
             .clip(CardShape)
-            .background(colors.primary)
+            .background(if (primary) colors.primary else colors.surface)
             .tapClickable(role = Role.Button, onClick = onClick),
         horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AppIconImage(
-            icon = AppIcon.Close,
-            tint = colors.onPrimary,
-            contentDescription = null,
-        )
-        Text("주행 종료", color = colors.onPrimary, style = AppType.BodyMedium.bold)
+        AppIconImage(icon = icon, tint = content, contentDescription = null)
+        Text(text, color = content, style = AppType.BodyMedium.bold)
     }
 }
 
-@Preview(showBackground = true, widthDp = 840, heightDp = 1200)
+@Preview(showBackground = true, widthDp = 840, heightDp = 1400)
 @Composable
 private fun DriveScreenPreview() {
+    val stops = listOf(
+        KeyStop("두물머리", LocationPoint(37.53, 127.31)),
+        KeyStop("세미원", LocationPoint(37.54, 127.32)),
+        KeyStop("청평호반", LocationPoint(37.73, 127.42)),
+    )
     ACARiveTheme {
         DriveScreen(
             routeName = "북한강 물빛 드라이브",
-            remainingDistance = "86 km",
-            remainingTime = "2시간 20분",
-            speedKph = 0,
+            progress = DriveProgress(stops, nextIndex = 1, remainingKm = 32.4, remainingMinutes = 40),
+            naviStatus = NaviStatus.Sent,
+            speedKph = 62,
+            nowPlaying = NowPlaying("드라이브 추천", "곡 제목", "아티스트 · 비 오는 날 차분한 곡", listOf("# 비", "# 국도 주행")),
+            isPlaying = true,
+            onTogglePlaying = {},
+            onOpenNavigation = {},
             onEndDrive = {},
         )
     }

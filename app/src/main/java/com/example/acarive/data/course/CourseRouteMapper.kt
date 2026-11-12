@@ -20,7 +20,7 @@ fun CourseRecommendation.toRoute(): Route = Route(
     tags = CourseTheme.entries.filter { it in course.themes }.map { it.label },
     // 코스 자체 이미지가 없으면 사진이 있는 첫 경유지
     imageUrl = (course.imageUrl ?: course.stops.firstNotNullOfOrNull { it.imageUrl })?.toHttps(),
-    congestion = null,
+    stopCount = course.stops.size,
     description = course.overview.cleanText(),
 )
 

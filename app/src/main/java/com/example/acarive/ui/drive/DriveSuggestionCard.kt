@@ -110,7 +110,7 @@ private fun SuggestionRow(suggestion: DriveSuggestion, onClick: () -> Unit) {
 @Composable
 private fun DriveSuggestionCardPreview() {
     fun route(id: String, name: String, tag: String) =
-        Route(id, name, "경기 가평군", "2시간", "90 km", listOf(tag), null, null, "")
+        Route(id, name, "경기 가평군", "2시간", "90 km", listOf(tag), null, 3, "")
     ACARiveTheme {
         DriveSuggestionCard(
             suggestions = listOf(

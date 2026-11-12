@@ -38,10 +38,11 @@ fun HomeScreen(
     onToggleFavorite: (String) -> Unit,
     onOpenAllRoutes: () -> Unit,
     onOpenRecord: () -> Unit,
+    onOpenNotifications: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val controls: @Composable () -> Unit = {
-        HomeTopBar()
+        HomeTopBar(onOpenNotifications)
         DriveStatusRow(isDriveMode = state.isDriveMode, onToggle = onToggleDriveMode)
         PlaylistSection(
             nowPlaying = state.nowPlaying,
@@ -131,7 +132,7 @@ private val PreviewState = AppUiState(
 @Composable
 private fun HomeScreenPreview() {
     ACARiveTheme {
-        HomeScreen(PreviewState, PreviewDriveSummary, isWide = false, {}, {}, {}, {}, {}, {}, {})
+        HomeScreen(PreviewState, PreviewDriveSummary, isWide = false, {}, {}, {}, {}, {}, {}, {}, {})
     }
 }
 
@@ -139,6 +140,6 @@ private fun HomeScreenPreview() {
 @Composable
 private fun HomeScreenWidePreview() {
     ACARiveTheme(darkTheme = true) {
-        HomeScreen(PreviewState, PreviewDriveSummary, isWide = true, {}, {}, {}, {}, {}, {}, {})
+        HomeScreen(PreviewState, PreviewDriveSummary, isWide = true, {}, {}, {}, {}, {}, {}, {}, {})
     }
 }

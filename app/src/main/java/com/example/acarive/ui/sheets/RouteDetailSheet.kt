@@ -43,7 +43,7 @@ fun RouteDetailSheet(
 ) {
     val colors = AppTheme.colors
     val imageButtonBackground = Black.copy(alpha = 0.6f)
-    // TODO(backend): 코스 상세 API (경유지, 실시간 도로 혼잡도, 코스별 설명). 지금은 목록 데이터를 그대로 사용하고 설명/혼잡도는 목업.
+    // TODO(backend): 코스 상세 API (경유지 목록, 실시간 도로 혼잡도). 지금은 목록 데이터를 그대로 쓴다.
     AppBottomSheet(onDismiss = onDismiss) { close ->
         Column(Modifier.verticalScroll(rememberScrollState())) {
             Box(Modifier.fillMaxWidth().height(360.dp)) {
@@ -86,7 +86,7 @@ fun RouteDetailSheet(
                     items = listOf(
                         StatItem("왕복 시간", route.duration),
                         StatItem("주행 거리", route.distance),
-                        StatItem("도로 혼잡", route.congestion ?: "-"),
+                        StatItem("경유지", if (route.stopCount > 0) "${route.stopCount}곳" else "-"),
                     ),
                 )
                 HorizontalLine()
