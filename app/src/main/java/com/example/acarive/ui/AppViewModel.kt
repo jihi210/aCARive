@@ -14,6 +14,7 @@ import com.example.acarive.data.course.CourseRecommender
 import com.example.acarive.data.course.heroFor
 import com.example.acarive.data.course.toDriveSuggestion
 import com.example.acarive.data.course.toRoute
+import com.example.acarive.data.favorite.FavoriteRepository
 import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.data.profile.ProfileRepository
 import com.example.acarive.location.LocationPoint
@@ -57,7 +58,7 @@ const val USE_MOCK_VEHICLE = false
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // TODO(backend): 초기 상태를 SampleData 대신 API 응답으로 채우기
-    //  - 즐겨찾기 목록(지금은 메모리에만 있어 앱을 끄면 사라짐), 연결된 차량
+    //  - 즐겨찾기 목록(지금은 기기에만 저장), 연결된 차량
     //  - 추천: assets 카탈로그 + 위치·취향으로 앱에서 정렬 (CourseRecommender). 타 사용자 기록은 아직
     //  - 날씨: 현재 위치 기반 날씨 API
     //  - 로딩/에러 상태도 AppUiState 에 추가 필요
@@ -68,6 +69,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val courseRepository = CourseCatalogRepository(application)
     private val profileRepository = ProfileRepository(application)
+    private val favoriteRepository = FavoriteRepository(application)
     private var catalog: CourseCatalog? = null
 
     // 추천 기준 위치. 실제 위치를 받기 전에는 기본 지점
@@ -93,6 +95,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     init {
         watchDrivingRestriction()
         loadProfile()
+        loadFavorites()
         loadCourses()
         startLocation()
     }
@@ -143,6 +146,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // 기기에 저장된 즐겨찾기를 계속 받는다. toggleFavorite 로 저장하면 여기로 다시 들어온다
+    private fun loadFavorites() {
+        viewModelScope.launch {
+            favoriteRepository.routeIds.collect { ids ->
+                _uiState.update { it.copy(favoriteRouteIds = ids) }
+            }
+        }
+    }
+
     private fun loadCourses() {
         viewModelScope.launch {
             try {
@@ -179,17 +191,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun togglePlaying() {
         // TODO(backend): Spotify 재생/일시정지 연동. 재생 상태는 Spotify 콜백 기준으로 갱신
-        // TODO(vehicle): Pleos Connect 오디오 포커스 정책 적용 (길안내 음성 시 일시정지/볼륨 조절, 포커스 손실 처리)
+        // 오디오 포커스는 앱에서 따로 처리하지 않는다. 소리는 Spotify 앱이 내고(App Remote 는 원격 조종만),
+        // 길안내 음성이 나오면 차량 오디오(CarAudioService)가 음악 볼륨을 자동으로 낮춘다.
+        // 이 앱이 포커스를 요청하면 오히려 Spotify 재생을 끊게 된다.
         _uiState.update { it.copy(isPlaying = !it.isPlaying) }
     }
 
+    // TODO(backend): 서버가 생기면 즐겨찾기 추가/삭제 API 도 호출
     fun toggleFavorite(routeId: String) {
-        // TODO(backend): 즐겨찾기 추가/삭제 API 호출 (실패 시 롤백)
-        _uiState.update { state ->
-            val favorites = state.favoriteRouteIds
-            state.copy(
-                favoriteRouteIds = if (routeId in favorites) favorites - routeId else favorites + routeId,
-            )
+        viewModelScope.launch {
+            try {
+                favoriteRepository.toggle(routeId)
+            } catch (e: IOException) {
+                Log.e(TAG, "즐겨찾기 저장 실패", e)
+                showToast("즐겨찾기를 저장하지 못했어요")
+            }
         }
     }
 

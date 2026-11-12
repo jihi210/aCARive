@@ -38,7 +38,8 @@ fun SavedScreen(
     onToggleFavorite: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // TODO(backend): 추천 코스 목록에서 거르는 대신 즐겨찾기 목록 API로 조회 (추천에 없는 코스도 저장될 수 있음)
+    // routes 에는 카탈로그 코스가 전부 들어 있어서 저장한 코스는 다 보인다.
+    // 카탈로그에서 빠진 코스는 저장돼 있어도 보이지 않는다
     val saved = routes.filter { it.id in favoriteRouteIds }
 
     LazyVerticalGrid(
