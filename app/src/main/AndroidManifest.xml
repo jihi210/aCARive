@@ -27,6 +27,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ACARive">
+        <!-- 차량에서만 있는 라이브러리. 없어도(일반 폰) 설치되게 required=false (DrivingRestriction.kt) -->
+        <uses-library
+            android:name="android.car"
+            android:required="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

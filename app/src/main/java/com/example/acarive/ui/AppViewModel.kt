@@ -20,6 +20,7 @@ import com.example.acarive.location.LocationPoint
 import com.example.acarive.location.PleosLocation
 import com.example.acarive.location.mockRoute
 import com.example.acarive.ui.record.USE_MOCK_LOCATION
+import com.example.acarive.vehicle.DrivingRestriction
 import com.example.acarive.vehicle.PleosVehicle
 import com.example.acarive.vehicle.VehicleData
 import com.example.acarive.vehicle.label
@@ -84,10 +85,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // 이번 주행에서 이미 보여준 코스는 다시 추천하지 않는다
     private val suggestedIds = mutableSetOf<String>()
 
+    private val drivingRestriction = DrivingRestriction(application)
+
     private var vehicle: PleosVehicle? = null
     private var vehicleJob: Job? = null
 
     init {
+        watchDrivingRestriction()
         loadProfile()
         loadCourses()
         startLocation()
@@ -153,8 +157,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // TODO(vehicle): Pleos Connect 빌드에서 CarUxRestrictionsManager 를 구독해 isDrivingRestricted 를 갱신
-    //  (NO_SETUP, NO_KEYBOARD, LIMIT_CONTENT 플래그 기준). 지금은 항상 false 라 제한 UI가 동작하지 않는다.
+    // 차량이 주는 주행 중 UX 제한을 화면 상태로. 차량이 아니면 항상 false
+    private fun watchDrivingRestriction() {
+        drivingRestriction.start()
+        viewModelScope.launch {
+            drivingRestriction.restricted.collect { restricted ->
+                _uiState.update { it.copy(isDrivingRestricted = restricted) }
+            }
+        }
+    }
 
     /** 주행 중 막힌 기능을 눌렀을 때 안내 */
     fun showParkingRequired() {
@@ -284,6 +295,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     override fun onCleared() {
+        drivingRestriction.stop()
         location?.stop()
         stopVehicle()
     }

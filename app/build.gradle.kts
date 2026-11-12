@@ -13,6 +13,8 @@ val localProps = Properties().apply {
 
 android {
     namespace = "com.example.acarive"
+    // CarUxRestrictionsManager (주행 중 UX 제한). 차량에만 있는 라이브러리라 매니페스트에서 required=false
+    useLibrary("android.car")
     compileSdk {
         version = release(37)
     }
