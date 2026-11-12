@@ -5,6 +5,8 @@ import android.os.Environment
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.acarive.car.CarModel
+import com.example.acarive.car.CarRepository
 import com.example.acarive.data.drive.DriveDatabase
 import com.example.acarive.data.drive.RoutePoint
 import com.example.acarive.data.drive.saveDrive
@@ -40,6 +42,8 @@ data class DriveRecordUiState(
     val expandedSessionId: Long? = null,
     val expandedPoints: List<RoutePoint> = emptyList(),
     val video: DriveVideoState = DriveVideoState.Idle,
+    /** 추억 영상에 등장할 차 (마지막으로 고른 차를 기억한다) */
+    val selectedCar: CarModel = CarModel.DEFAULT,
 )
 
 /** 펼친 드라이브의 추억 영상 상태 */
@@ -53,6 +57,7 @@ sealed interface DriveVideoState {
 /** 기록 상태를 화면 밖에 두어 탭을 옮기거나 화면이 회전해도 기록이 이어지게 한다. */
 class DriveRecordViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = DriveDatabase.get(application).driveDao()
+    private val carRepo = CarRepository(application)
     private var location: PleosLocation? = null
     private val recorded = mutableListOf<LocationPoint>()
     private var recordingJob: Job? = null
@@ -68,6 +73,9 @@ class DriveRecordViewModel(application: Application) : AndroidViewModel(applicat
             dao.getSessions().collect { sessions ->
                 _uiState.update { it.copy(summary = sessions.toDriveSummary(Year.now().value)) }
             }
+        }
+        viewModelScope.launch {
+            carRepo.selectedCar.collect { car -> _uiState.update { it.copy(selectedCar = car) } }
         }
     }
 
@@ -138,20 +146,25 @@ class DriveRecordViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    /** 펼친 드라이브의 경로로 지도 배경 위에 경로가 그려지는 영상을 만든다. */
-    fun makeVideo() {
+    /**
+     * 펼친 드라이브의 경로로 지도 배경 위를 [car]가 달리는 영상을 만든다.
+     * 고른 차는 저장해 두고 다음 영상의 기본값으로 쓴다. 같은 드라이브를 다른 차로 만들면 영상을 덮어쓴다.
+     */
+    fun makeVideo(car: CarModel = _uiState.value.selectedCar) {
         val state = _uiState.value
         val sessionId = state.expandedSessionId ?: return
         if (state.expandedPoints.size < 2 || videoJob != null) return
         val points = state.expandedPoints
+        _uiState.update { it.copy(selectedCar = car) }
         videoJob = viewModelScope.launch {
             val app = getApplication<Application>()
             try {
+                carRepo.setSelectedCar(car)
                 val session = dao.getSession(sessionId) ?: error("드라이브를 찾을 수 없어요")
                 setVideo(sessionId, DriveVideoState.Making("지도를 준비하고 있어요"))
                 val bg = makeMapBackground(app, points, sessionId)
                 setVideo(sessionId, DriveVideoState.Making("영상을 만들고 있어요"))
-                val file = makeRouteVideo(app, bg, session, videoFile(sessionId))
+                val file = makeRouteVideo(app, bg, session, videoFile(sessionId), car)
                 setVideo(sessionId, DriveVideoState.Ready(file))
             } catch (e: kotlinx.coroutines.CancellationException) {
                 videoFile(sessionId).delete() // 만들다 만 파일을 다음에 완성본으로 착각하지 않게

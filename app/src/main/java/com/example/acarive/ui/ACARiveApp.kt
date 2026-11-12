@@ -186,7 +186,7 @@ fun ACARiveApp(
                         onStartRecording = requestRecording,
                         onStopRecording = finishRecording,
                         onToggleDrive = recordViewModel::toggleExpanded,
-                        onMakeVideo = recordViewModel::makeVideo,
+                        onMakeVideo = { car -> recordViewModel.makeVideo(car) },
                         onDownloadVideo = {
                             recordViewModel.downloadVideo { saved ->
                                 viewModel.showToast(if (saved) "다운로드 폴더에 영상을 저장했어요" else "영상을 저장하지 못했어요")
