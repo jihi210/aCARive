@@ -41,7 +41,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
     val controls: @Composable () -> Unit = {
-        HomeTopBar(firstName = state.profile.firstName)
+        HomeTopBar()
         DriveStatusRow(isDriveMode = state.isDriveMode, onToggle = onToggleDriveMode)
         PlaylistSection(
             nowPlaying = state.nowPlaying,

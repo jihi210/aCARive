@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(project(":shared"))
+    implementation(libs.androidx.datastore.preferences)
     implementation("ai.pleos.playground:FusedLocation:1.1.3")
     implementation("ai.pleos.playground:Vehicle:2.3.2")
     implementation("androidx.room3:room3-runtime:$room_version")

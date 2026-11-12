@@ -38,7 +38,7 @@ import com.example.acarive.ui.theme.AppType
 import com.example.acarive.ui.theme.bold
 
 @Composable
-internal fun HomeTopBar(firstName: String) {
+internal fun HomeTopBar() {
     val colors = AppTheme.colors
     Row(
         modifier = Modifier
@@ -47,7 +47,7 @@ internal fun HomeTopBar(firstName: String) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            "${firstName}님, 어디로 갈까요?",
+            "어디로 갈까요?",
             color = colors.text,
             style = AppType.TitleMedium,
             modifier = Modifier.weight(1f),

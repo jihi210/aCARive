@@ -78,10 +78,6 @@ object SampleData {
     )
 
     val profile = UserProfile(
-        firstName = "민준",
-        fullName = "김민준",
-        initials = "MJ",
-        levelLabel = "blueway 드라이버 · Lv. 8",
         preferences = listOf("바다", "한적한 길", "노을"),
         spotifyConnected = true,
         recommendWhileDriving = true,

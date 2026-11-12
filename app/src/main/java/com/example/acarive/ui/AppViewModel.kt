@@ -14,6 +14,7 @@ import com.example.acarive.data.course.CourseRecommender
 import com.example.acarive.data.course.heroFor
 import com.example.acarive.data.course.toRoute
 import com.example.acarive.data.model.VehicleInfo
+import com.example.acarive.data.profile.ProfileRepository
 import com.example.acarive.location.LocationPoint
 import com.example.acarive.location.PleosLocation
 import com.example.acarive.location.mockRoute
@@ -48,7 +49,7 @@ const val USE_MOCK_VEHICLE = false
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // TODO(backend): 초기 상태를 SampleData 대신 API 응답으로 채우기
-    //  - 사용자 프로필/취향, 즐겨찾기 목록(지금은 메모리에만 있어 앱을 끄면 사라짐), 연결된 차량
+    //  - 즐겨찾기 목록(지금은 메모리에만 있어 앱을 끄면 사라짐), 연결된 차량
     //  - 추천: assets 카탈로그 + 위치·취향으로 앱에서 정렬 (CourseRecommender). 타 사용자 기록은 아직
     //  - 날씨: 현재 위치 기반 날씨 API
     //  - 로딩/에러 상태도 AppUiState 에 추가 필요
@@ -58,6 +59,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var toastJob: Job? = null
 
     private val courseRepository = CourseCatalogRepository(application)
+    private val profileRepository = ProfileRepository(application)
     private var catalog: CourseCatalog? = null
 
     // 추천 기준 위치. 실제 위치를 받기 전에는 기본 지점
@@ -71,6 +73,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var vehicleJob: Job? = null
 
     init {
+        loadProfile()
         loadCourses()
         startLocation()
     }
@@ -106,6 +109,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val originLabel = if (hasRealOrigin) null else DEFAULT_ORIGIN_LABEL
         _uiState.update {
             it.copy(routes = recs.map { r -> r.toRoute() }, hero = recs.firstOrNull()?.let { r -> heroFor(r, originLabel) })
+        }
+    }
+
+    // 기기에 저장된 취향·설정을 계속 받는다. 취향이 바뀌면 추천도 다시 계산한다.
+    private fun loadProfile() {
+        viewModelScope.launch {
+            profileRepository.profile.collect { profile ->
+                val preferencesChanged = profile.preferences != _uiState.value.profile.preferences
+                _uiState.update { it.copy(profile = profile) }
+                if (preferencesChanged) recommend()
+            }
         }
     }
 

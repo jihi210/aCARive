@@ -63,12 +63,10 @@ data class DriveSummary(
     val recentDrives: List<DriveHistoryItem>,
 )
 
+// 로그인이 없어서 이름 같은 신원 정보는 두지 않는다. 기기에 저장되는 취향·설정만 담는다.
+// 기본값 = 처음 설치했을 때 상태 (ProfileRepository)
 data class UserProfile(
-    val firstName: String,
-    val fullName: String,
-    val initials: String,
-    val levelLabel: String,
-    val preferences: List<String>,
-    val spotifyConnected: Boolean,
-    val recommendWhileDriving: Boolean,
+    val preferences: List<String> = emptyList(),
+    val spotifyConnected: Boolean = false,
+    val recommendWhileDriving: Boolean = true,
 )

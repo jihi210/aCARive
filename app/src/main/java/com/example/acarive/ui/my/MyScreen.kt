@@ -12,9 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,8 +35,6 @@ import com.example.acarive.ui.components.tapClickable
 import com.example.acarive.ui.theme.ACARiveTheme
 import com.example.acarive.ui.theme.AppTheme
 import com.example.acarive.ui.theme.AppType
-import com.example.acarive.ui.theme.Black
-import com.example.acarive.ui.theme.Copper
 import com.example.acarive.ui.theme.bold
 
 @Composable
@@ -57,9 +53,7 @@ fun MyScreen(
     }
 
     SubPage(modifier) {
-        PageHeader(title = "${profile.firstName}님의 드라이브")
-        ProfileCard(profile)
-        Spacer(Modifier.height(16.dp))
+        PageHeader(title = "내 드라이브")
         VehicleCard(vehicle, onOpenVehicle)
         Spacer(Modifier.height(32.dp))
         Text("선호하는 드라이브", color = colors.text, style = AppType.TitleSmall)
@@ -95,34 +89,6 @@ fun MyScreen(
                 onClick = whenParked {},
             )
         }
-    }
-}
-
-@Composable
-private fun ProfileCard(profile: UserProfile) {
-    val colors = AppTheme.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(CardShape)
-            .background(colors.surface)
-            // TODO(backend): 프로필 조회/수정 화면 (시안에 화면 없음)
-            .tapClickable {}
-            .padding(horizontal = 32.dp, vertical = 24.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            Modifier.size(96.dp).background(Copper, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(profile.initials, color = Black, style = AppType.BodyMedium.bold)
-        }
-        Spacer(Modifier.width(24.dp))
-        Column(Modifier.weight(1f)) {
-            Text(profile.fullName, color = colors.text, style = AppType.BodyMedium.bold)
-            Text(profile.levelLabel, color = colors.textSecondary, style = AppType.LabelMedium)
-        }
-        AppIconImage(AppIcon.Chevron, colors.textSecondary, size = 40.dp)
     }
 }
 
@@ -172,6 +138,9 @@ private fun PreferenceCard(preferences: List<String>, onReset: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             preferences.forEach { TagChip(it) }
+        }
+        if (preferences.isEmpty()) {
+            Text("아직 고른 취향이 없어요", color = colors.textSecondary, style = AppType.BodySmall)
         }
         Spacer(Modifier.height(8.dp))
         Box(

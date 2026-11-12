@@ -9,7 +9,8 @@ import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.data.model.Weather
 
 data class AppUiState(
-    val profile: UserProfile = SampleData.profile,
+    // 저장된 값을 읽기 전에는 기본값 (AppViewModel.loadProfile)
+    val profile: UserProfile = UserProfile(),
     // 카탈로그를 읽기 전에는 비어 있다 (AppViewModel.loadCourses)
     val routes: List<Route> = emptyList(),
     val hero: HeroRecommendation? = null,
@@ -18,7 +19,7 @@ data class AppUiState(
     val favoriteRouteIds: Set<String> = emptySet(),
     val isDriveMode: Boolean = true,
     /**
-     * 차량이 주행 제한 상태인지 여부. true 면 설정·로그인·동의처럼 조작이 많은 기능과 긴 글을 막는다.
+     * 차량이 주행 제한 상태인지 여부. true 면 설정·동의처럼 조작이 많은 기능과 긴 글을 막는다.
      * [AppViewModel] 참고.
      */
     val isDrivingRestricted: Boolean = false,
