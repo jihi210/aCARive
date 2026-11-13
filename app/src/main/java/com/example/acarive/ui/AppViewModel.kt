@@ -47,8 +47,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -345,6 +348,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private val _spotifyAuthRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val spotifyAuthRequests: SharedFlow<Unit> = _spotifyAuthRequests.asSharedFlow()
+    private var spotifyAuthRequested = false
+
+    fun onSpotifyAuthResult(success: Boolean) {
+        if (!success) {
+            showToast("Spotify 승인이 취소됐어요")
+            return
+        }
+        viewModelScope.launch { if (connectSpotify()) showToast("Spotify가 연결됐어요") }
+    }
+
     // 마이 화면 "Spotify 연결". 연결돼 있으면 해제한다
     fun toggleSpotify() {
         if (music.status.value == SpotifyStatus.Connected) {
@@ -364,10 +379,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             showToast("Spotify 앱을 먼저 설치해 주세요")
             return false
         }
-        if (!music.connect(showAuthView = true)) {
+        if (!music.connect(showAuthView = false)) {
+            val needsAuth = music.lastError?.startsWith("UserNotAuthorizedException") == true
+            if (needsAuth && !spotifyAuthRequested) {
+                spotifyAuthRequested = true
+                _spotifyAuthRequests.tryEmit(Unit)
+                return false
+            }
             showToast("Spotify에 연결하지 못했어요")
             return false
         }
+        spotifyAuthRequested = false
         try {
             profileRepository.setSpotifyConnected(true)
         } catch (e: IOException) {
