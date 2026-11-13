@@ -117,7 +117,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val carNavigation: CarNavigation? =
         if (CarNavigation.isAvailable(application)) CarNavigation(application, NaviEvents()) else null
 
-    private val music = DriveMusic(application, viewModelScope, speedKmh) {
+    private val music = DriveMusic(application, viewModelScope, speedKmh, location = { currentLocation ?: origin }) {
         showToast("Spotify 연결이 끊겼어요")
     }
 

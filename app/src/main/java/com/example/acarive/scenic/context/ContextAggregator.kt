@@ -66,6 +66,7 @@ class ContextAggregator(
 
     private suspend fun refreshEnvironment() {
         val info = try { weatherSource.current() } catch (e: Exception) { null }
+        android.util.Log.d("KmaWeather", "조회 결과: $info")
         val hour = now().hour
         _context.update {
             it.copy(
