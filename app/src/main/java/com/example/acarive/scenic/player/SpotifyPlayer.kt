@@ -18,7 +18,6 @@ class SpotifyPlayer(
     private val redirectUri: String,
 ) : MusicPlayer {
     private var remote: SpotifyAppRemote? = null
-    @Volatile var activityContext: Context? = null //테스트용
     private val _nowPlaying = MutableStateFlow<NowPlaying?>(null)
     override val nowPlaying: StateFlow<NowPlaying?> = _nowPlaying.asStateFlow()
 
@@ -32,7 +31,7 @@ class SpotifyPlayer(
             .setRedirectUri(redirectUri)
             .showAuthView(showAuthView)
             .build()
-        SpotifyAppRemote.connect(activityContext ?: context, params, object : Connector.ConnectionListener {
+        SpotifyAppRemote.connect(context, params, object : Connector.ConnectionListener {
             override fun onConnected(appRemote: SpotifyAppRemote) {
                 remote = appRemote
                 _connected.value = true

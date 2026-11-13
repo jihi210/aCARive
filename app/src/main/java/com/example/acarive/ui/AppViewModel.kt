@@ -41,7 +41,9 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import kotlin.math.roundToInt
 import android.content.Context
-
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 private const val TOAST_DURATION_MS = 2_200L
 private const val TAG = "AppViewModel"
@@ -76,20 +78,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val profileRepository = ProfileRepository(application)
     private val favoriteRepository = FavoriteRepository(application)
     private var catalog: CourseCatalog? = null
-
-    // 추천 기준 위치. 실제 위치를 받기 전에는 기본 지점
     private var origin: LocationPoint = if (USE_MOCK_LOCATION) mockRoute.first() else DEFAULT_ORIGIN
     private var hasRealOrigin = USE_MOCK_LOCATION
-    // 가장 최근 위치. 주행 중 추천에 쓴다
+
     private var currentLocation: LocationPoint? = null
     private var location: PleosLocation? = null
-    // 위치 변화로 계산한 속도. 차량 카드에 쓴다
     private val speedKmh = MutableStateFlow<Int?>(null)
 
     private var suggestJob: Job? = null
-    // 지금 안내 중인 코스. 추천에서 뺀다
     private var drivingRouteId: String? = null
-    // 이번 주행에서 이미 보여준 코스는 다시 추천하지 않는다
     private val suggestedIds = mutableSetOf<String>()
 
     private val drivingRestriction = DrivingRestriction(application)
@@ -145,7 +142,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 기기에 저장된 취향·설정을 계속 받는다. 취향이 바뀌면 추천도 다시 계산한다.
     private fun loadProfile() {
         viewModelScope.launch {
             profileRepository.profile.collect { profile ->
@@ -156,7 +152,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 기기에 저장된 즐겨찾기를 계속 받는다. toggleFavorite 로 저장하면 여기로 다시 들어온다
     private fun loadFavorites() {
         viewModelScope.launch {
             favoriteRepository.routeIds.collect { ids ->
@@ -179,7 +174,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 차량이 주는 주행 중 UX 제한을 화면 상태로. 차량이 아니면 항상 false
     private fun watchDrivingRestriction() {
         drivingRestriction.start()
         viewModelScope.launch {
@@ -189,7 +183,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** 주행 중 막힌 기능을 눌렀을 때 안내 */
     fun showParkingRequired() {
         showToast("주차 후 이용할 수 있어요")
     }
@@ -199,7 +192,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(isDriveMode = !it.isDriveMode) }
     }
 
-    // Spotify 상태와 홈 카드를 화면 상태로. 연결해 둔 적이 있으면 앱을 켤 때 조용히 다시 연결한다
     private fun watchMusic() {
         viewModelScope.launch {
             combine(music.status, music.card, music.isPlaying) { status, card, playing -> Triple(status, card, playing) }
@@ -212,10 +204,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 홈 카드 재생 버튼. 연결 전이면 연결부터 하고 바로 추천 곡을 튼다.
-    // 오디오 포커스는 앱에서 따로 처리하지 않는다. 소리는 Spotify 앱이 내고(App Remote 는 원격 조종만),
-    // 길안내 음성이 나오면 차량 오디오(CarAudioService)가 음악 볼륨을 자동으로 낮춘다.
-    // 이 앱이 포커스를 요청하면 오히려 Spotify 재생을 끊게 된다.
     fun togglePlaying() {
         viewModelScope.launch {
             if (music.status.value != SpotifyStatus.Connected && !connectSpotify()) return@launch
@@ -223,10 +211,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    //spotify 테스트
-    fun setActivity(activity: Context?) = music.setActivity(activity)
+    private val _spotifyAuthRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val spotifyAuthRequests: SharedFlow<Unit> = _spotifyAuthRequests.asSharedFlow()
+    private var spotifyAuthRequested = false
 
-    // 마이 화면 "Spotify 연결". 연결돼 있으면 해제한다
+    fun onSpotifyAuthResult(success: Boolean) {
+        if (!success) {
+            showToast("Spotify 승인이 취소됐어요")
+            return
+        }
+        viewModelScope.launch { if (connectSpotify()) showToast("Spotify가 연결됐어요") }
+    }
+
     fun toggleSpotify() {
         if (music.status.value == SpotifyStatus.Connected) {
             music.disconnect()
@@ -237,19 +233,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             if (connectSpotify()) showToast("Spotify가 연결됐어요")
         }
     }
-
-    // 실패하면 안내를 띄우고 false. 성공하면 다음에 앱을 켤 때 자동으로 연결하도록 저장한다
     private suspend fun connectSpotify(): Boolean {
         if (music.status.value == SpotifyStatus.Connecting) return false
         if (!music.isInstalled()) {
             showToast("Spotify 앱을 먼저 설치해 주세요")
             return false
         }
-        if (!music.connect(showAuthView = true)) {
-            //showToast("Spotify에 연결하지 못했어요")
-            showToast("Spotify에 연결하지 못했어요" + (music.lastError?.let { "\n$it" } ?: "")) //spotify 확인용
+        if (!music.connect(showAuthView = false)) {
+            val needsAuth = music.lastError?.startsWith("UserNotAuthorizedException") == true
+            if (needsAuth && !spotifyAuthRequested) {
+                spotifyAuthRequested = true
+                _spotifyAuthRequests.tryEmit(Unit)
+                return false
+            }
+            showToast("Spotify에 연결하지 못했어요")
             return false
         }
+        spotifyAuthRequested = false
         try {
             profileRepository.setSpotifyConnected(true)
         } catch (e: IOException) {

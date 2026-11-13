@@ -105,7 +105,6 @@ class DriveMusic(
     //spotify 테스트용
     var lastError: String? = null
         private set
-    fun setActivity(activity: Context?) { player.activityContext = activity }
     fun isInstalled(): Boolean = SpotifyAppRemote.isSpotifyInstalled(context)
 
     // 연결되면 true. 앱 시작 때 자동 재연결은 showAuthView = false 로 조용히 시도한다

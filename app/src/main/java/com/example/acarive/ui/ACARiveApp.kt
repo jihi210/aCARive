@@ -50,7 +50,11 @@ import com.example.acarive.ui.sheets.RouteDetailSheet
 import com.example.acarive.ui.sheets.VehicleConnectSheet
 import com.example.acarive.ui.theme.AppTheme
 import com.example.acarive.vehicle.PleosVehicle
-import androidx.compose.runtime.DisposableEffect
+import android.app.Activity
+import com.example.acarive.BuildConfig
+import com.spotify.sdk.android.auth.AuthorizationClient
+import com.spotify.sdk.android.auth.AuthorizationRequest
+import com.spotify.sdk.android.auth.AuthorizationResponse
 
 /** 이 폭 이상이면 가로 창(앱 영역 2칸)으로 보고 측면 탭 + 2단 레이아웃을 쓴다. */
 val WideWindowWidth = 1200.dp
@@ -60,12 +64,28 @@ fun ACARiveApp(
     viewModel: AppViewModel = viewModel(),
     recordViewModel: DriveRecordViewModel = viewModel(),
 ) {
-    //spotify 테스트용
     val activityContext = LocalContext.current
-    DisposableEffect(activityContext) {
-        viewModel.setActivity(activityContext)
-        onDispose { viewModel.setActivity(null) }   // Activity 누수 방지
+    val spotifyAuthLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        val type = AuthorizationClient.getResponse(result.resultCode, result.data).type
+        viewModel.onSpotifyAuthResult(
+            type == AuthorizationResponse.Type.TOKEN || type == AuthorizationResponse.Type.CODE,
+        )
     }
+    LaunchedEffect(Unit) {
+        viewModel.spotifyAuthRequests.collect {
+            val request = AuthorizationRequest.Builder(
+                BuildConfig.SPOTIFY_CLIENT_ID,
+                AuthorizationResponse.Type.TOKEN,
+                "acarive://spotify-auth",
+            ).setScopes(arrayOf("app-remote-control")).build()
+            spotifyAuthLauncher.launch(
+                AuthorizationClient.createLoginActivityIntent(activityContext as Activity, request),
+            )
+        }
+    }
+
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val recordState by recordViewModel.uiState.collectAsStateWithLifecycle()
     var activeTab by rememberSaveable { mutableStateOf(AppTab.Home) }
@@ -109,10 +129,10 @@ fun ACARiveApp(
         }
     }
 
-    // 기록 중이거나 코스 안내 중이면 주변 코스를 주기적으로 추천한다
+    // 기록 중이거나 코스 안내 중이면 주변 코스를 주기적으로 추천
     val isDriving = recordState.isRecording || activeDriveRouteId != null
     LaunchedEffect(isDriving, activeDriveRouteId) { viewModel.setDriving(isDriving, activeDriveRouteId) }
-    // 코스를 고르면 그 코스로 안내한다 (안내 중이면 코스를 바꾼다). 기록은 이어서 한다
+    // 코스를 고르면 그 코스로 안내 (안내 중이면 코스를 바꾼다). 기록은 이어서 한다
     val suggestionCard: (@Composable (Modifier) -> Unit)? = if (state.driveSuggestions.isEmpty()) null else { cardModifier ->
         DriveSuggestionCard(
             suggestions = state.driveSuggestions,
