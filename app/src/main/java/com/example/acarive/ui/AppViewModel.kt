@@ -42,7 +42,6 @@ import java.io.IOException
 import kotlin.math.roundToInt
 import android.content.Context
 
-
 private const val TOAST_DURATION_MS = 2_200L
 private const val TAG = "AppViewModel"
 
