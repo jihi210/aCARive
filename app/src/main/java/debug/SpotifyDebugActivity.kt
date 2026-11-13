@@ -22,6 +22,10 @@ import com.acarive.scenic.data.TrackRepository
 import com.acarive.scenic.player.SpotifyPlayer
 import com.example.acarive.BuildConfig
 import kotlinx.coroutines.launch
+import androidx.activity.result.contract.ActivityResultContracts
+import com.spotify.sdk.android.auth.AuthorizationClient
+import com.spotify.sdk.android.auth.AuthorizationRequest
+import com.spotify.sdk.android.auth.AuthorizationResponse
 
 class SpotifyDebugActivity : ComponentActivity() {
     private lateinit var player: SpotifyPlayer
@@ -30,6 +34,24 @@ class SpotifyDebugActivity : ComponentActivity() {
     private fun log(msg: String) {
         Log.d("SpotifyDebug", msg)
         logs.add(0, msg)
+    }
+
+    private val authLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val response = AuthorizationClient.getResponse(result.resultCode, result.data)
+        when (response.type) {
+            AuthorizationResponse.Type.TOKEN, AuthorizationResponse.Type.CODE -> log("사전 인증 성공")
+            AuthorizationResponse.Type.ERROR -> log("사전 인증 오류: ${response.error}")
+            else -> log("사전 인증 취소/기타: ${response.type}")
+        }
+    }
+
+    private fun startPreAuth() {
+        val request = AuthorizationRequest.Builder(
+            BuildConfig.SPOTIFY_CLIENT_ID,
+            AuthorizationResponse.Type.TOKEN,
+            "acarive://spotify-auth",
+        ).setScopes(arrayOf("app-remote-control")).build()
+        authLauncher.launch(AuthorizationClient.createLoginActivityIntent(this, request))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +74,7 @@ class SpotifyDebugActivity : ComponentActivity() {
                             "${it.title} - ${it.artist}" + if (it.isPaused) " (일시정지)" else ""
                         } ?: "없음")
                     )
+                    Button(onClick = { startPreAuth() }) { Text("0. Spotify 사전 인증") }
                     Button(onClick = {
                         lifecycleScope.launch {
                             log("연결 시도…")

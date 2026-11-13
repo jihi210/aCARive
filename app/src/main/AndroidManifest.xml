@@ -4,14 +4,12 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="pleos.car.permission.FUSED_LOCATION" />
-    <!-- Pleos Vehicle SDK 읽기 권한: 차량 정보(VIN), 기어, 배터리·연료·주행 가능 거리 -->
     <uses-permission android:name="pleos.car.permission.CAR_INFO" />
     <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />
     <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />
 
     <queries>
         <package android:name="com.spotify.music" />
-        <!-- 영상을 받을 앱이 있는지 확인 (ShareVideo.kt) -->
         <intent>
             <action android:name="android.intent.action.SEND" />
             <data android:mimeType="video/*" />
@@ -46,14 +44,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="acarive"
-                    android:host="spotify-auth" />
-            </intent-filter>
         </activity>
 
         <!-- 추억 영상을 다른 앱으로 공유할 때 파일 접근 권한을 넘겨준다 (ShareVideo.kt) -->
@@ -74,6 +64,19 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.spotify.sdk.android.auth.browser.RedirectUriReceiverActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="acarive"
+                    android:host="spotify-auth" />
             </intent-filter>
         </activity>
     </application>

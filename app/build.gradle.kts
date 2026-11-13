@@ -97,6 +97,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     implementation(files("libs/spotify-app-remote-release-0.8.0.aar"))
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.spotify.android:auth:5.0.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")
