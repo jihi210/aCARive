@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import android.util.Log
 
 /** Spotify App Remote SDK로 Spotify 앱을 원격 제어한다. Spotify 앱 설치·로그인과 Premium이 필요하다. */
 class SpotifyPlayer(
@@ -17,6 +18,7 @@ class SpotifyPlayer(
     private val redirectUri: String,
 ) : MusicPlayer {
     private var remote: SpotifyAppRemote? = null
+    @Volatile var activityContext: Context? = null //테스트용
     private val _nowPlaying = MutableStateFlow<NowPlaying?>(null)
     override val nowPlaying: StateFlow<NowPlaying?> = _nowPlaying.asStateFlow()
 
@@ -30,7 +32,7 @@ class SpotifyPlayer(
             .setRedirectUri(redirectUri)
             .showAuthView(showAuthView)
             .build()
-        SpotifyAppRemote.connect(context, params, object : Connector.ConnectionListener {
+        SpotifyAppRemote.connect(activityContext ?: context, params, object : Connector.ConnectionListener {
             override fun onConnected(appRemote: SpotifyAppRemote) {
                 remote = appRemote
                 _connected.value = true
@@ -51,8 +53,22 @@ class SpotifyPlayer(
         })
     }
 
-    override fun play(uri: String) { remote?.playerApi?.play(uri) }
-    override fun enqueue(uri: String) { remote?.playerApi?.queue(uri) }
+    override fun play(uri: String) {
+        val r = remote
+        if (r == null) { Log.w(TAG, "play 무시: 연결 안 됨 $uri"); return }
+        r.playerApi.play(uri)
+            .setResultCallback { Log.d(TAG, "play OK $uri") }
+            .setErrorCallback { Log.e(TAG, "play 실패 $uri", it) }
+    }
+
+    override fun enqueue(uri: String) {
+        val r = remote
+        if (r == null) { Log.w(TAG, "enqueue 무시: 연결 안 됨 $uri"); return }
+        r.playerApi.queue(uri)
+            .setResultCallback { Log.d(TAG, "enqueue OK $uri") }
+            .setErrorCallback { Log.e(TAG, "enqueue 실패 $uri", it) }
+    }
+
     override fun skipNext() { remote?.playerApi?.skipNext() }
     fun pause() { remote?.playerApi?.pause() }
     fun resume() { remote?.playerApi?.resume() }
@@ -63,4 +79,6 @@ class SpotifyPlayer(
         _connected.value = false
         _nowPlaying.value = null
     }
+
+    private companion object { const val TAG = "SpotifyPlayer" }
 }

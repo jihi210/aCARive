@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.acarive.scenic.player.NowPlaying as PlayerState
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val TAG = "DriveMusic"
 private const val REDIRECT_URI = "acarive://spotify-auth"
@@ -101,6 +102,10 @@ class DriveMusic(
         }
     }
 
+    //spotify 테스트용
+    var lastError: String? = null
+        private set
+    fun setActivity(activity: Context?) { player.activityContext = activity }
     fun isInstalled(): Boolean = SpotifyAppRemote.isSpotifyInstalled(context)
 
     // 연결되면 true. 앱 시작 때 자동 재연결은 showAuthView = false 로 조용히 시도한다
@@ -120,7 +125,10 @@ class DriveMusic(
             return false
         }
         _status.value = SpotifyStatus.Connecting
-        val result = player.connect(showAuthView)
+        val result = withTimeoutOrNull(30_000L) { player.connect(showAuthView) }
+            ?: Result.failure(Exception("시간 초과(30초): 권한 화면이 안 뜨거나 Spotify 앱이 응답하지 않아요"))
+        if (result.isFailure) player.release() // 늦게 붙는 연결이 남지 않게 정리
+        lastError = result.exceptionOrNull()?.let { "${it::class.java.simpleName}: ${it.message}" }
         result.exceptionOrNull()?.let { Log.w(TAG, "Spotify 연결 실패", it) }
         _status.value = if (result.isSuccess) SpotifyStatus.Connected else SpotifyStatus.Disconnected
         return result.isSuccess

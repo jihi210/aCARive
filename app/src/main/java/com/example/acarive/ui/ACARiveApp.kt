@@ -50,6 +50,7 @@ import com.example.acarive.ui.sheets.RouteDetailSheet
 import com.example.acarive.ui.sheets.VehicleConnectSheet
 import com.example.acarive.ui.theme.AppTheme
 import com.example.acarive.vehicle.PleosVehicle
+import androidx.compose.runtime.DisposableEffect
 
 /** 이 폭 이상이면 가로 창(앱 영역 2칸)으로 보고 측면 탭 + 2단 레이아웃을 쓴다. */
 val WideWindowWidth = 1200.dp
@@ -59,6 +60,12 @@ fun ACARiveApp(
     viewModel: AppViewModel = viewModel(),
     recordViewModel: DriveRecordViewModel = viewModel(),
 ) {
+    //spotify 테스트용
+    val activityContext = LocalContext.current
+    DisposableEffect(activityContext) {
+        viewModel.setActivity(activityContext)
+        onDispose { viewModel.setActivity(null) }   // Activity 누수 방지
+    }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val recordState by recordViewModel.uiState.collectAsStateWithLifecycle()
     var activeTab by rememberSaveable { mutableStateOf(AppTab.Home) }

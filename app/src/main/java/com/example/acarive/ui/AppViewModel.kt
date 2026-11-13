@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
 import kotlin.math.roundToInt
+import android.content.Context
 
 private const val TOAST_DURATION_MS = 2_200L
 private const val TAG = "AppViewModel"
@@ -221,6 +222,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    //spotify 테스트
+    fun setActivity(activity: Context?) = music.setActivity(activity)
+
     // 마이 화면 "Spotify 연결". 연결돼 있으면 해제한다
     fun toggleSpotify() {
         if (music.status.value == SpotifyStatus.Connected) {
@@ -241,7 +245,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             return false
         }
         if (!music.connect(showAuthView = true)) {
-            showToast("Spotify에 연결하지 못했어요")
+            //showToast("Spotify에 연결하지 못했어요")
+            showToast("Spotify에 연결하지 못했어요" + (music.lastError?.let { "\n$it" } ?: "")) //spotify 확인용
             return false
         }
         try {
