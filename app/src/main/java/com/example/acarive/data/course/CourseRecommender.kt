@@ -55,7 +55,8 @@ object CourseRecommender {
             .sortedWith(
                 compareBy<CourseRecommendation> { it.estimate == null }
                     .thenByDescending { it.inWindow }
-                    .thenBy { if (it.inWindow) 0 else gapFromWindow(it.estimate!!.roundTripMinutes) }
+                    // 추정 없는 코스끼리 비교될 때도 있어서 !! 쓰면 안 된다
+                    .thenBy { if (it.inWindow) 0 else it.estimate?.let { e -> gapFromWindow(e.roundTripMinutes) } ?: 0 }
                     .thenByDescending { it.matchedThemes.size }
                     .thenBy { abs((it.estimate?.roundTripMinutes ?: 0) - TARGET_MINUTES) },
             )
