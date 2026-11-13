@@ -125,6 +125,7 @@ private val PreviewDriveSummary = DriveSummary(2026, 12_480.0, 42, "186시간", 
 private val PreviewState = AppUiState(
     routes = SampleData.routes,
     hero = SampleData.hero,
+    weather = SampleData.weather,
     favoriteRouteIds = SampleData.favoriteRouteIds,
 )
 

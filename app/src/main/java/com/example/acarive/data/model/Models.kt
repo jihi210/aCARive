@@ -30,7 +30,11 @@ data class DriveSuggestion(
 data class Weather(
     val temperature: Int,
     val description: String,
+    val condition: WeatherCondition,
 )
+
+// 기상청 날씨 분류. 아이콘을 고르는 데 쓴다
+enum class WeatherCondition { Sunny, Cloudy, Rain, Snow }
 
 data class NowPlaying(
     val mixName: String,

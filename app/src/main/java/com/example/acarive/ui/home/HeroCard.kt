@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.example.acarive.data.model.HeroRecommendation
 import com.example.acarive.data.model.Weather
+import com.example.acarive.data.model.WeatherCondition
 import com.example.acarive.ui.components.AppIcon
 import com.example.acarive.ui.components.AppIconImage
 import com.example.acarive.ui.components.ButtonShape
@@ -47,7 +48,7 @@ private val HeroShade = Brush.verticalGradient(
 @Composable
 internal fun HeroCard(
     hero: HeroRecommendation,
-    weather: Weather,
+    weather: Weather?,
     onOpenRoute: () -> Unit,
 ) {
     Box(
@@ -64,7 +65,8 @@ internal fun HeroCard(
         )
         Box(Modifier.fillMaxSize().background(HeroShade))
 
-        Row(
+        // 날씨를 받기 전에는 칩을 숨긴다
+        if (weather != null) Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(24.dp)
@@ -73,7 +75,7 @@ internal fun HeroCard(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppIconImage(AppIcon.Cloud, White, size = 40.dp)
+            AppIconImage(weather.condition.icon, White, size = 40.dp)
             Text("${weather.temperature}° ${weather.description}", color = White, style = AppType.LabelMedium)
         }
 
@@ -109,3 +111,11 @@ internal fun HeroCard(
         }
     }
 }
+
+private val WeatherCondition.icon: AppIcon
+    get() = when (this) {
+        WeatherCondition.Sunny -> AppIcon.Sun
+        WeatherCondition.Cloudy -> AppIcon.Cloud
+        WeatherCondition.Rain -> AppIcon.CloudRain
+        WeatherCondition.Snow -> AppIcon.CloudSnow
+    }

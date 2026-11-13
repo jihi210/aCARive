@@ -18,6 +18,14 @@ import com.example.acarive.data.course.CourseProgress
 import com.example.acarive.data.course.keyStops
 import com.example.acarive.data.favorite.FavoriteRepository
 import com.example.acarive.data.model.VehicleInfo
+import com.example.acarive.data.model.Weather
+import com.example.acarive.data.model.WeatherCondition
+import com.example.acarive.BuildConfig
+import com.acarive.scenic.context.KmaWeatherSource
+import com.acarive.scenic.context.MockWeatherSource
+import com.acarive.scenic.context.WeatherInfo
+import com.acarive.scenic.context.WeatherSource
+import com.acarive.scenic.domain.Weather as MusicWeather
 import com.example.acarive.data.profile.ProfileRepository
 import com.example.acarive.location.DemoDrive
 import com.example.acarive.location.LocationPoint
@@ -60,6 +68,8 @@ private val DEFAULT_ORIGIN = LocationPoint(37.5665, 126.9780)
 private const val DEFAULT_ORIGIN_LABEL = "서울시청"
 // 이만큼 움직였을 때만 추천을 다시 계산한다
 private const val RECOMMEND_MOVE_KM = 5.0
+// 홈 날씨를 다시 받는 간격 (기상청 초단기실황은 1시간마다 갱신)
+private const val WEATHER_INTERVAL_MS = 20 * 60_000L
 
 // 주행 중 추천: 30분마다 주변 코스 2개. 주변에 없으면 잠깐 뒤 다시 본다
 private const val SUGGEST_INTERVAL_MS = 30 * 60_000L
@@ -117,7 +127,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val carNavigation: CarNavigation? =
         if (CarNavigation.isAvailable(application)) CarNavigation(application, NaviEvents()) else null
 
-    private val music = DriveMusic(application, viewModelScope, speedKmh, location = { currentLocation ?: origin }) {
+    // 기상청 단기예보. 홈 날씨와 음악 추천이 같이 쓴다.
+    // KMA_SERVICE_KEY(local.properties)가 없으면 18° 비로 고정된 Mock
+    private val weatherSource: WeatherSource =
+        if (BuildConfig.KMA_SERVICE_KEY.isBlank()) {
+            Log.w(TAG, "local.properties 에 KMA_SERVICE_KEY 가 없어 Mock 날씨를 쓴다")
+            MockWeatherSource(WeatherInfo(MusicWeather.RAIN, 18.0))
+        } else {
+            KmaWeatherSource(BuildConfig.KMA_SERVICE_KEY, location = { currentLocation ?: origin })
+        }
+    private var weatherJob: Job? = null
+
+    private val music = DriveMusic(application, viewModelScope, speedKmh, weatherSource) {
         showToast("Spotify 연결이 끊겼어요")
     }
 
@@ -132,6 +153,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         loadCourses()
         watchLocation()
         startLocation()
+        refreshWeather()
     }
 
     // 위치 권한이 있으면 위치를 받기 시작한다. 권한을 받은 뒤 다시 불러도 된다.
@@ -189,6 +211,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             hasRealOrigin = false
             currentLocation = null
             recommend()
+            refreshWeather()
         }
         showToast("데모를 껐어요")
     }
@@ -218,6 +241,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         origin = point
         hasRealOrigin = true
         recommend()
+        refreshWeather()
+    }
+
+    // 홈 날씨. 지금 위치로 바로 받고 그 뒤로는 주기적으로 다시 받는다. 실패하면 직전 날씨를 그대로 둔다
+    private fun refreshWeather() {
+        weatherJob?.cancel()
+        weatherJob = viewModelScope.launch {
+            while (true) {
+                weatherSource.current()?.let { info -> _uiState.update { it.copy(weather = info.toHomeWeather()) } }
+                delay(WEATHER_INTERVAL_MS)
+            }
+        }
     }
 
     private fun recommend() {
@@ -558,6 +593,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
+
+// 기상청 날씨 -> 홈 카드 문구
+private fun WeatherInfo.toHomeWeather(): Weather = Weather(
+    temperature = tempC.roundToInt(),
+    description = weather.label,
+    condition = when (weather) {
+        MusicWeather.SUNNY -> WeatherCondition.Sunny
+        MusicWeather.CLOUDY -> WeatherCondition.Cloudy
+        MusicWeather.RAIN -> WeatherCondition.Rain
+        MusicWeather.SNOW -> WeatherCondition.Snow
+    },
+)
 
 // 차량 SDK 값 -> 화면용. 배터리 값이 오면 EV 로 본다.
 private fun VehicleData.toVehicleInfo(speedKmh: Int?): VehicleInfo = VehicleInfo(

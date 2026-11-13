@@ -1,6 +1,5 @@
 package com.example.acarive.ui
 
-import com.example.acarive.data.SampleData
 import com.example.acarive.data.course.DriveProgress
 import com.example.acarive.navi.NaviStatus
 import com.example.acarive.location.LocationPoint
@@ -19,7 +18,8 @@ data class AppUiState(
     // 카탈로그를 읽기 전에는 비어 있다 (AppViewModel.loadCourses)
     val routes: List<Route> = emptyList(),
     val hero: HeroRecommendation? = null,
-    val weather: Weather = SampleData.weather,
+    // 기상청에서 받기 전에는 null (AppViewModel.refreshWeather)
+    val weather: Weather? = null,
     // 홈 플레이리스트 카드. AppViewModel 이 시작하자마자 DriveMusic.card 로 채운다
     val nowPlaying: NowPlaying = NowPlaying("", "", "", emptyList()),
     val spotify: SpotifyStatus = SpotifyStatus.Disconnected,

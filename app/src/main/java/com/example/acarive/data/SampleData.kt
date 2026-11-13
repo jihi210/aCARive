@@ -6,6 +6,7 @@ import com.example.acarive.data.model.Route
 import com.example.acarive.data.model.UserProfile
 import com.example.acarive.data.model.VehicleInfo
 import com.example.acarive.data.model.Weather
+import com.example.acarive.data.model.WeatherCondition
 
 /**
  * 디자인 시안에 들어 있던 목업 데이터. 코스는 이제 assets 카탈로그에서 읽고, 여기 코스는 미리보기에만 쓴다.
@@ -57,7 +58,7 @@ object SampleData {
         etaLabel = "현 위치에서 18분 · 교통 원활",
     )
 
-    val weather = Weather(temperature = 18, description = "가벼운 비")
+    val weather = Weather(temperature = 18, description = "가벼운 비", condition = WeatherCondition.Rain)
 
     val nowPlaying = NowPlaying(
         mixName = "Rainy Road Mix",
