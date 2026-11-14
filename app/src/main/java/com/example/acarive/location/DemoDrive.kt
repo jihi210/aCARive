@@ -36,7 +36,7 @@ data class DemoDriveState(
 }
 
 // 시연용 가짜 주행. 지도에서 현재 위치를 찍으면 그 위치를 실제 위치 대신 쓰고,
-// 주행을 시작하면 경유지를 직선으로 이어 따라간다. 앱 전체에서 하나만 쓴다 (AppViewModel, DriveRecordViewModel).
+// 주행을 시작하면 경유지를 실제 도로로 이어 따라간다 (RoadRoute). 앱 전체에서 하나만 쓴다 (AppViewModel, DriveRecordViewModel).
 object DemoDrive {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var driveJob: Job? = null
@@ -61,12 +61,14 @@ object DemoDrive {
     }
 
     // 지금 위치에서 waypoints 를 순서대로 지나간다. 다 가면 마지막 지점에 멈춘다.
+    // 실제 도로 경로를 먼저 받아서 따라가고, 못 받으면 경유지를 직선으로 잇는다
     fun driveAlong(waypoints: List<LocationPoint>) {
         val from = position ?: return
         stopDriving()
-        val path = listOf(from) + waypoints
-        if (path.size < 2) return
+        val stops = listOf(from) + waypoints
+        if (stops.size < 2) return
         driveJob = scope.launch {
+            val path = RoadRoute.fetch(stops) ?: stops
             var tick = 0
             var segment = 0
             var current = from
@@ -103,6 +105,6 @@ object DemoDrive {
     }
 }
 
-// 짧은 구간이라 위경도를 그대로 선형 보간해도 된다
+// 도로 좌표 사이는 짧아서 위경도를 그대로 선형 보간해도 된다
 private fun lerp(a: LocationPoint, b: LocationPoint, t: Double) =
     LocationPoint(a.lat + (b.lat - a.lat) * t, a.lng + (b.lng - a.lng) * t)
