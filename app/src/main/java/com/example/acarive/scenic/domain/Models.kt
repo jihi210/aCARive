@@ -78,4 +78,19 @@ data class DrivingContext(
     val speedBand: SpeedBand? = null,
 )
 
-data class UserPreference(val genres: Set<GenreGroup> = emptySet())
+/** 사용자가 고른 장르 그룹. 비어 있으면 모든 장르를 같은 취향으로 본다. */
+data class UserPreference(val genres: Set<GenreGroup> = emptySet()) {
+    companion object {
+        /** 취향을 입력하지 않았을 때 쓰는 기본값. */
+        val DEFAULT = UserPreference(setOf(GenreGroup.CHILL, GenreGroup.POP))
+
+        /**
+         * 화면에서 선택한 장르 이름 목록으로 만든다.
+         * 알 수 없는 이름은 무시하고, 인식된 장르가 하나도 없으면 DEFAULT를 쓴다.
+         */
+        fun fromLabels(labels: Collection<String>?): UserPreference {
+            val genres = labels.orEmpty().mapNotNull { GenreGroup.fromLabel(it) }.toSet()
+            return if (genres.isEmpty()) DEFAULT else UserPreference(genres)
+        }
+    }
+}

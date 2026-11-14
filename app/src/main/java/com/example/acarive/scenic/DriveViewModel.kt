@@ -13,7 +13,6 @@ import com.acarive.scenic.context.WeatherInfo
 import com.acarive.scenic.context.WeatherSource
 import com.acarive.scenic.context.KmaWeatherSource
 import com.acarive.scenic.data.TrackRepository
-import com.acarive.scenic.domain.GenreGroup
 import com.acarive.scenic.domain.Recommender
 import com.acarive.scenic.domain.UserPreference
 import com.acarive.scenic.domain.Weather
@@ -50,7 +49,7 @@ class DriveViewModel(app: Application) : AndroidViewModel(app) {
         recommender = Recommender(tracks),
         aggregator = aggregator,
         player = player,
-        preference = UserPreference(setOf(GenreGroup.CHILL, GenreGroup.POP)),
+        preferenceProvider = { UserPreference.DEFAULT },
         scope = viewModelScope,
     )
 

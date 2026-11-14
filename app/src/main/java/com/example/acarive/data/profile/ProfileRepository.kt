@@ -19,6 +19,7 @@ private val Context.profileStore by preferencesDataStore(name = "profile")
 private val PREFERENCES = stringPreferencesKey("preferences")
 private val SPOTIFY_CONNECTED = booleanPreferencesKey("spotify_connected")
 private val RECOMMEND_WHILE_DRIVING = booleanPreferencesKey("recommend_while_driving")
+private val MUSIC_GENRES = stringPreferencesKey("music_genres")
 
 // 취향 순서를 지키려고 Set 대신 줄바꿈으로 이어 붙여 저장한다
 private const val SEPARATOR = "\n"
@@ -38,6 +39,14 @@ class ProfileRepository(context: Context) {
         store.edit { it[PREFERENCES] = preferences.joinToString(SEPARATOR) }
     }
 
+    // 코스 테마와 음악 장르를 한 번에 저장한다. 나눠 저장하면 화면이 중간 상태를 한 번 받는다
+    suspend fun setTaste(preferences: List<String>, musicGenres: List<String>) {
+        store.edit {
+            it[PREFERENCES] = preferences.joinToString(SEPARATOR)
+            it[MUSIC_GENRES] = musicGenres.joinToString(SEPARATOR)
+        }
+    }
+
     suspend fun setSpotifyConnected(connected: Boolean) {
         store.edit { it[SPOTIFY_CONNECTED] = connected }
     }
@@ -53,5 +62,6 @@ private fun Preferences.toProfile(): UserProfile {
         preferences = this[PREFERENCES]?.split(SEPARATOR)?.filter { it.isNotBlank() } ?: default.preferences,
         spotifyConnected = this[SPOTIFY_CONNECTED] ?: default.spotifyConnected,
         recommendWhileDriving = this[RECOMMEND_WHILE_DRIVING] ?: default.recommendWhileDriving,
+        musicGenres = this[MUSIC_GENRES]?.split(SEPARATOR)?.filter { it.isNotBlank() } ?: default.musicGenres,
     )
 }

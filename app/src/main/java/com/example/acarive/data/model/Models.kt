@@ -81,4 +81,6 @@ data class UserProfile(
     // Spotify 를 연결해 둔 적이 있으면 true. 앱을 켤 때 자동으로 다시 연결한다 (실제 연결 상태는 AppUiState.spotify)
     val spotifyConnected: Boolean = false,
     val recommendWhileDriving: Boolean = true,
+    // 음악 취향. 장르 그룹 이름(역동적, chill, 서정적, 팝). 비어 있으면 chill, 팝으로 추천한다
+    val musicGenres: List<String> = emptyList(),
 )

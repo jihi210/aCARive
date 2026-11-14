@@ -293,6 +293,7 @@ fun ACARiveApp(
     if (showPreferenceSheet) {
         PreferenceSheet(
             current = state.profile.preferences,
+            currentMusic = state.profile.musicGenres,
             isDrivingRestricted = state.isDrivingRestricted,
             onSave = viewModel::savePreferences,
             onDismiss = { showPreferenceSheet = false },

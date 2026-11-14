@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.acarive.scenic.domain.GenreGroup
 import com.example.acarive.data.course.CourseTheme
 import com.example.acarive.ui.components.AppIcon
 import com.example.acarive.ui.components.AppIconImage
@@ -42,8 +43,9 @@ import com.example.acarive.ui.theme.AppType
 @Composable
 fun PreferenceSheet(
     current: List<String>,
+    currentMusic: List<String>,
     isDrivingRestricted: Boolean,
-    onSave: (List<String>) -> Unit,
+    onSave: (themes: List<String>, musicGenres: List<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = AppTheme.colors
@@ -51,6 +53,13 @@ fun PreferenceSheet(
     var selected by rememberSaveable {
         mutableStateOf(
             CourseTheme.entries.filter { theme -> current.any { it.contains(theme.label) || theme.label.contains(it) } }
+                .map { it.label },
+        )
+    }
+    // 음악 취향. 장르 그룹 이름(GenreGroup.label)을 그대로 저장한다
+    var selectedMusic by rememberSaveable {
+        mutableStateOf(
+            GenreGroup.values().filter { g -> currentMusic.any { it.equals(g.label, ignoreCase = true) } }
                 .map { it.label },
         )
     }
@@ -96,6 +105,7 @@ fun PreferenceSheet(
             )
             Spacer(Modifier.height(32.dp))
             ThemeChips(
+                options = CourseTheme.entries.map { it.label },
                 selected = selected,
                 onToggle = { label ->
                     // 테마 정의 순서를 지킨다
@@ -103,12 +113,34 @@ fun PreferenceSheet(
                     selected = CourseTheme.entries.map { it.label }.filter { it in next }
                 },
             )
+
+            Spacer(Modifier.height(48.dp))
+            Text("어떤 음악을 좋아하세요?", color = colors.text, style = AppType.TitleLarge)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "역동적(힙합·EDM·록) · chill(R&B·로파이·재즈) · 서정적(어쿠스틱·인디 포크·발라드) · 팝(팝·시티팝·인디팝)\n" +
+                    "고르지 않으면 chill과 팝으로 추천해요.",
+                color = colors.textSecondary,
+                style = AppType.BodySmall,
+            )
+            Spacer(Modifier.height(32.dp))
+            ThemeChips(
+                options = GenreGroup.values().map { it.label },
+                selected = selectedMusic,
+                onToggle = { label ->
+                    // 장르 그룹 정의 순서를 지킨다
+                    val next = if (label in selectedMusic) selectedMusic - label else selectedMusic + label
+                    selectedMusic = GenreGroup.values().map { it.label }.filter { it in next }
+                },
+            )
+
             Spacer(Modifier.height(40.dp))
+            val total = selected.size + selectedMusic.size
             PrimaryButton(
-                text = if (selected.isEmpty()) "취향 없이 저장하기" else "${selected.size}개 저장하기",
+                text = if (total == 0) "취향 없이 저장하기" else "${total}개 저장하기",
                 icon = AppIcon.Check,
                 onClick = {
-                    onSave(selected)
+                    onSave(selected, selectedMusic)
                     close()
                 },
             )
@@ -118,13 +150,13 @@ fun PreferenceSheet(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ThemeChips(selected: List<String>, onToggle: (String) -> Unit) {
+private fun ThemeChips(options: List<String>, selected: List<String>, onToggle: (String) -> Unit) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        CourseTheme.entries.forEach { theme ->
-            ThemeChip(theme.label, isSelected = theme.label in selected, onClick = { onToggle(theme.label) })
+        options.forEach { label ->
+            ThemeChip(label, isSelected = label in selected, onClick = { onToggle(label) })
         }
     }
 }

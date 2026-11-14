@@ -7,7 +7,6 @@ import com.acarive.scenic.context.SpeedSource
 import com.acarive.scenic.context.WeatherSource
 import com.acarive.scenic.data.TrackRepository
 import com.acarive.scenic.domain.DrivingContext
-import com.acarive.scenic.domain.GenreGroup
 import com.acarive.scenic.domain.Recommendation
 import com.acarive.scenic.domain.Recommender
 import com.acarive.scenic.domain.SpeedBand
@@ -36,9 +35,6 @@ private const val TAG = "DriveMusic"
 private const val REDIRECT_URI = "acarive://spotify-auth"
 private const val MIX_NAME = "드라이브 추천"
 
-// TODO(music): 음악 취향 설정 화면이 생기면 거기서 받기. 지금은 팀원 테스트(DriveViewModel)와 같은 기본값
-private val DEFAULT_GENRES = setOf(GenreGroup.CHILL, GenreGroup.POP)
-
 enum class SpotifyStatus { NotInstalled, Disconnected, Connecting, Connected }
 
 // 주행 음악. Spotify 연결을 관리하고, 추천 엔진(scenic DriveSession)이 속도·날씨·시간대에 맞는 곡을 골라 튼다.
@@ -62,6 +58,10 @@ class DriveMusic(
     private val tracks by lazy { TrackRepository(context).load() }
 
     private var sessionScope: CoroutineScope? = null
+    private var session: DriveSession? = null
+
+    // 사용자가 고른 음악 장르 이름(GenreGroup.label). 비어 있으면 UserPreference.DEFAULT(chill, 팝)
+    private var musicGenres: List<String> = emptyList()
     private val recommendation = MutableStateFlow<Recommendation?>(null)
     private val drivingContext = MutableStateFlow(DrivingContext())
 
@@ -139,26 +139,34 @@ class DriveMusic(
         }
     }
 
+    // 앱 시작 때 저장된 취향을 읽었을 때와 취향을 저장했을 때 호출한다. 재생 중이면 다음 곡 선정부터 반영된다
+    fun setMusicGenres(labels: List<String>) {
+        if (labels == musicGenres) return
+        musicGenres = labels
+        session?.updatePreference(UserPreference.fromLabels(labels))
+    }
+
     private fun startSession() {
         val parent = scope.coroutineContext[Job]
         val s = CoroutineScope(scope.coroutineContext + SupervisorJob(parent)).also { sessionScope = it }
         val aggregator = ContextAggregator(speedSource, weatherSource)
-        val session = DriveSession(
+        val newSession = DriveSession(
             recommender = Recommender(tracks),
             aggregator = aggregator,
             player = player,
-            preference = UserPreference(DEFAULT_GENRES),
+            preferenceProvider = { UserPreference.fromLabels(musicGenres) },
             scope = s,
-        )
+        ).also { session = it }
         aggregator.start(s)
-        session.start()
-        s.launch { session.current.collect { recommendation.value = it } }
+        newSession.start()
+        s.launch { newSession.current.collect { recommendation.value = it } }
         s.launch { aggregator.context.collect { drivingContext.value = it } }
     }
 
     private fun stopSession() {
         sessionScope?.cancel()
         sessionScope = null
+        session = null
         recommendation.value = null
         drivingContext.value = DrivingContext()
     }

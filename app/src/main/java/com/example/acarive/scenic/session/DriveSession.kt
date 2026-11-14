@@ -30,7 +30,7 @@ class DriveSession(
     private val recommender: Recommender,
     private val aggregator: ContextAggregator,
     private val player: MusicPlayer,
-    private val preference: UserPreference,
+    private val preferenceProvider: () -> UserPreference,   // 드라이브 시작 시점의 취향을 읽어 온다
     private val scope: CoroutineScope,
     private val config: SessionConfig = SessionConfig(),
     private val clock: () -> Long = System::currentTimeMillis,
@@ -41,6 +41,7 @@ class DriveSession(
     private val played = LinkedHashSet<String>()      // 이번 드라이브에서 이미 고른 곡 (같은 곡 최대 1번)
     private val recs = HashMap<String, Recommendation>()
     private var pool: List<Track>? = null
+    private var preference: UserPreference = UserPreference.DEFAULT
     private var playing: Started? = null
 
     private val _current = MutableStateFlow<Recommendation?>(null)
@@ -48,6 +49,8 @@ class DriveSession(
     val current: StateFlow<Recommendation?> = _current.asStateFlow()
 
     fun start() {
+        preference = preferenceProvider()
+        pool = null
         scope.launch {
             // 첫 환경 값이 들어올 때까지 최대 5초 기다렸다가 첫 곡을 고른다.
             withTimeoutOrNull(5_000) { aggregator.context.first { it.speedBand != null || it.weather != null } }
@@ -59,6 +62,12 @@ class DriveSession(
         scope.launch {
             aggregator.context.map { it.speedBand }.distinctUntilChanged().collect { enforceSafety() }
         }
+    }
+
+    /** 드라이브 도중 취향이 바뀌었을 때 호출한다. 후보를 새로 만들고 다음 곡 선정부터 반영된다. */
+    fun updatePreference(newPreference: UserPreference) {
+        preference = newPreference
+        pool = null
     }
 
     private fun pick(): Recommendation? {

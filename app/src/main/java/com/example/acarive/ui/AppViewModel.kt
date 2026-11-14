@@ -274,6 +274,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             profileRepository.profile.collect { profile ->
                 val preferencesChanged = profile.preferences != _uiState.value.profile.preferences
                 _uiState.update { it.copy(profile = profile) }
+                music.setMusicGenres(profile.musicGenres)
                 if (preferencesChanged) recommend()
             }
         }
@@ -419,8 +420,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // 저장하면 loadProfile 이 받아서 홈 추천도 다시 계산한다
-    fun savePreferences(preferences: List<String>) {
-        saveProfile("취향을 저장했어요") { setPreferences(preferences) }
+    fun savePreferences(preferences: List<String>, musicGenres: List<String>) {
+        saveProfile("취향을 저장했어요") { setTaste(preferences, musicGenres) }
     }
 
     private fun saveProfile(doneMessage: String, save: suspend ProfileRepository.() -> Unit) {
