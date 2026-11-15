@@ -23,3 +23,6 @@ dist
 # 수집 스크립트: API 키가 든 설정과 진행 상태
 /collector/collector.properties
 /collector/data
+# release 서명 키
+*.jks
+*.keystore

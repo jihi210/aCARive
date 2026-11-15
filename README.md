@@ -15,11 +15,10 @@ Pleos Connect 차량용 앱입니다. 저장소와 패키지 이름은 개발 �
 
 ## 실행 방법
 
-1. 저장소를 클론하고 `feature/integrate-spotify` 브랜치로 이동합니다.
+1. 저장소를 클론합니다.
    ```sh
    git clone https://github.com/jihi210/aCARive.git
    cd aCARive
-   git checkout feature/integrate-spotify
    ```
 2. Android Studio로 프로젝트를 엽니다.
 3. 프로젝트 루트의 `local.properties`에 API 키를 넣습니다. (아래 [필요한 설정](#필요한-설정) 참고)
@@ -109,11 +108,11 @@ Scenic는 곡을 직접 재생하지 않고, Spotify App Remote SDK로 차량에
 
 ## APK
 
-- **제출본**: `scenic_debug.apk` (공모전 제출 이메일에 첨부)
+- **제출본**: `acarive_scenic_release.apk`, 저장소 내 경로: apk/acarive_scenic_release (공모전 제출 이메일에 첨부)
 - **직접 빌드**: `./gradlew :app:assembleDebug` → `app/build/outputs/apk/debug/app-debug.apk`
 
 ```sh
-adb install scenic_debug.apk
+adb install apk/acarive_scenic_release.apk
 ```
 
 ## 프로젝트 구조

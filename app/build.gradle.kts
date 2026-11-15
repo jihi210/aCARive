@@ -31,11 +31,27 @@ android {
         buildConfigField("String", "KMA_SERVICE_KEY", "\"${localProps.getProperty("KMA_SERVICE_KEY", "")}\"")
     }
 
+    // release 서명 정보는 local.properties에서 읽음 (키 파일·비번은 커밋 안 함)
+    val releaseStoreFile = localProps.getProperty("RELEASE_STORE_FILE")
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = localProps.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = localProps.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword = localProps.getProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // R8 끔: Gson·Spotify SDK 리플렉션 깨질 위험 때문에
             optimization {
-                enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
+                enable = false
+            }
+            if (releaseStoreFile != null) {
+                signingConfig = signingConfigs.getByName("release")
             }
         }
     }
