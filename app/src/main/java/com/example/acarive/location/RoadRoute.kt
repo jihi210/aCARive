@@ -11,7 +11,7 @@ private const val TAG = "RoadRoute"
 // OSRM 공개 데모 서버. 키 없이 쓸 수 있지만 가볍게만 써야 한다 (시연용)
 private const val BASE_URL = "https://router.project-osrm.org/route/v1/driving"
 private const val TIMEOUT_MS = 10_000
-private const val USER_AGENT = "aCARive-demo/1.0"
+private const val USER_AGENT = "Scenic-demo/1.0"
 
 // 데모 주행용 실제 도로 경로. points 를 순서대로 지나는 도로 위 좌표 목록을 돌려준다
 object RoadRoute {

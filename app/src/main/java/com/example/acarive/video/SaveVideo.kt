@@ -10,9 +10,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 // 기기 다운로드 폴더 안에 이 이름으로 모은다
-private const val DOWNLOAD_FOLDER = "aCARive"
+private const val DOWNLOAD_FOLDER = "Scenic"
 
-// 추억 영상을 기기 다운로드 폴더(Download/aCARive)에 복사한다. 실패하면 false.
+// 추억 영상을 기기 다운로드 폴더(Download/Scenic)에 복사한다. 실패하면 false.
 // Android 10 미만은 저장소 권한이 따로 필요해서 지원하지 않는다
 suspend fun saveVideoToDownloads(context: Context, file: File, name: String): Boolean = withContext(Dispatchers.IO) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return@withContext false

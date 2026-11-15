@@ -6,7 +6,7 @@
 serviceKey=
 
 # MobileApp 파라미터 (서비스명)
-mobileApp=aCARive
+mobileApp=Scenic
 mobileOs=ETC
 
 # 한 번 실행에서 쓸 최대 호출 수. 개발계정 하루 한도(1,000)보다 조금 작게.

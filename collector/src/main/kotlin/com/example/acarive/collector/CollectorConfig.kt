@@ -8,7 +8,7 @@ data class CollectorConfig(
     // data.go.kr 에서 받은 인증키. Encoding 키(% 포함)와 Decoding 키 둘 다 된다.
     val serviceKey: String,
     val mobileOs: String = "ETC",
-    val mobileApp: String = "aCARive",
+    val mobileApp: String = "Scenic",
     // 한 번 실행에서 쓸 최대 호출 수. 개발계정 하루 한도(1,000)보다 조금 작게 둔다.
     val callLimit: Int = 950,
     // 호출 사이 대기(ms). 너무 빠르면 서버가 막는다.

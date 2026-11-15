@@ -187,7 +187,7 @@ class DriveRecordViewModel(application: Application) : AndroidViewModel(applicat
         if (downloadJob != null) return
         downloadJob = viewModelScope.launch {
             try {
-                onFinished(saveVideoToDownloads(getApplication(), video.file, "aCARive_drive_$sessionId.mp4"))
+                onFinished(saveVideoToDownloads(getApplication(), video.file, "Scenic_drive_$sessionId.mp4"))
             } finally {
                 downloadJob = null
             }
