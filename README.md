@@ -68,7 +68,7 @@ Scenic는 곡을 직접 재생하지 않고, Spotify App Remote SDK로 차량에
     - Redirect URI: `acarive://spotify-auth`
     - Android Package name: `com.example.acarive`
     - SHA1 fingerprint: 빌드 키스토어의 SHA1 (`./gradlew signingReport`로 확인)
-2. 에뮬레이터에 **Spotify 앱을 설치하고 Premium 계정으로 로그인**합니다.
+2. 에뮬레이터에 **Spotify 앱을 설치하고 Premium 계정으로 로그인**합니다. 
 3. 앱의 **마이 > Spotify 연결**을 눌러 권한을 허용합니다.
 
 > Spotify App Remote SDK(`app/libs/spotify-app-remote-release-0.8.0.aar`)는 저장소에 포함돼 있습니다.
